@@ -75,12 +75,12 @@ public sealed class IdentityService : IIdentityService
         ApplicationUser? user = await _users.FindByIdAsync(stored.UserId.ToString("D"));
         if (user is null) return AuthenticationResult<TokenResponse>.Fail(AuthenticationFailure.InvalidRefreshToken);
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // A single SaveChanges call is already transactional. Avoid a user-created transaction here because
+        // Npgsql's retrying execution strategy must own retries and the transaction used by SaveChanges.
         TokenResponse replacement = await IssueAsync(user, cancellationToken, saveChanges: false);
         stored.RevokedAtUtc = DateTimeOffset.UtcNow;
         stored.ReplacedByTokenHash = Hash(replacement.RefreshToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
         return AuthenticationResult<TokenResponse>.Success(replacement);
     }
 
