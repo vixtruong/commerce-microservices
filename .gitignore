@@ -2,6 +2,7 @@
 [Bb]in/
 [Oo]bj/
 artifacts/
+/output/
 
 # IDEs and user settings
 .vs/

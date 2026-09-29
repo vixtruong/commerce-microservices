@@ -8,6 +8,11 @@
   <Folder Name="/Docs/">
     <File Path="docs/architecture.md" />
     <File Path="docs/local-infrastructure-guide.md" />
+    <File Path="docs/So_tay_giao_tiep_bao_mat_va_quan_sat_Commerce.docx" />
+    <File Path="docs/So_tay_giao_tiep_bao_mat_va_quan_sat_Commerce.pdf" />
+  </Folder>
+  <Folder Name="/Docs/Build/">
+    <File Path="tools/docs/build_commerce_handbook.py" />
   </Folder>
   <Folder Name="/Docs/ADR/">
     <File Path="docs/adr/0001-yarp-api-gateway.md" />
@@ -31,6 +36,7 @@
   </Folder>
   <Folder Name="/Docker/Deploy/Grafana/">
     <File Path="deploy/grafana/dashboards/commerce-overview.json" />
+    <File Path="deploy/grafana/dashboards/commerce-system-overview.json" />
     <File Path="deploy/grafana/provisioning/dashboards/commerce.yaml" />
     <File Path="deploy/grafana/provisioning/datasources/prometheus.yaml" />
   </Folder>
