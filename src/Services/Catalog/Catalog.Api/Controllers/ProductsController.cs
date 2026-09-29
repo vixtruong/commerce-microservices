@@ -14,6 +14,9 @@ namespace Catalog.Api.Controllers;
 [Route("api/catalog/products")]
 public sealed class ProductsController : ControllerBase
 {
+    /// <summary>Gets the stable route name used to generate product resource locations.</summary>
+    public const string GetProductRouteName = "Catalog.GetProduct";
+
     private readonly ISender _sender;
 
     /// <summary>Initializes the products controller.</summary>
@@ -39,7 +42,7 @@ public sealed class ProductsController : ControllerBase
     /// <param name="productId">Product identifier.</param>
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>The product or Problem Details.</returns>
-    [HttpGet("{productId:guid}")]
+    [HttpGet("{productId:guid}", Name = GetProductRouteName)]
     [AllowAnonymous]
     public async Task<ActionResult<ProductResponse>> GetProductAsync(Guid productId, CancellationToken cancellationToken)
     {
@@ -58,7 +61,8 @@ public sealed class ProductsController : ControllerBase
         Result<CreateProductResponse> result = await _sender.Send(new CreateProductCommand(
             request.Sku, request.Name, request.Description, request.PriceAmount, request.PriceCurrency), cancellationToken);
         return result.IsSuccess
-            ? CreatedAtAction(nameof(GetProductAsync), new { productId = result.Value.ProductId }, result.Value)
+            // A named route is independent of MVC's default removal of the Async action-name suffix.
+            ? CreatedAtRoute(GetProductRouteName, new { productId = result.Value.ProductId }, result.Value)
             : ProblemFor(result.Error);
     }
 

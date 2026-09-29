@@ -14,6 +14,9 @@ namespace Ordering.Api.Controllers;
 [Route("api/orders")]
 public sealed class OrdersController : ControllerBase
 {
+    /// <summary>Gets the stable route name used to generate order resource locations.</summary>
+    public const string GetOrderRouteName = "Ordering.GetOrder";
+
     private readonly ISender _sender;
 
     /// <summary>Initializes the Orders controller.</summary>
@@ -34,9 +37,8 @@ public sealed class OrdersController : ControllerBase
             CustomerId(), idempotencyKey, request.RecipientName, request.AddressLine1,
             request.City, request.PostalCode, request.CountryCode), cancellationToken);
         return result.IsSuccess
-            // MVC suppresses the Async suffix when deriving action names, so a direct Location avoids
-            // coupling this 202 response to action-name transformation conventions.
-            ? Accepted($"/api/orders/{result.Value.OrderId}", result.Value)
+            // The stable route name keeps Location generation independent of C# method names.
+            ? AcceptedAtRoute(GetOrderRouteName, new { orderId = result.Value.OrderId }, result.Value)
             : ProblemFor(result.Error);
     }
 
@@ -44,7 +46,7 @@ public sealed class OrdersController : ControllerBase
     /// <param name="orderId">Order identifier.</param>
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>The order or 404.</returns>
-    [HttpGet("{orderId:guid}")]
+    [HttpGet("{orderId:guid}", Name = GetOrderRouteName)]
     public async Task<ActionResult<OrderResponse>> GetOrderAsync(Guid orderId, CancellationToken cancellationToken)
     {
         Result<OrderResponse> result = await _sender.Send(new GetOrderQuery(orderId, CustomerId()), cancellationToken);
