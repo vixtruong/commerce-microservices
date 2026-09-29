@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Catalog.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Configures how the Product aggregate is stored in SQL Server.
+/// Configures how the Product aggregate is stored in PostgreSQL.
 /// </summary>
 internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
@@ -15,7 +15,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
     /// <param name="builder">The Product entity type builder.</param>
     public void Configure(EntityTypeBuilder<Product> builder)
     {
-        builder.ToTable("Products");
+        builder.ToTable("products");
 
         builder.HasKey(product => product.Id);
 
@@ -57,12 +57,12 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.OwnsOne(product => product.Price, priceBuilder =>
         {
             priceBuilder.Property(price => price.Amount)
-                .HasColumnName("PriceAmount")
+                .HasColumnName("price_amount")
                 .HasPrecision(18, 2)
                 .IsRequired();
 
             priceBuilder.Property(price => price.Currency)
-                .HasColumnName("PriceCurrency")
+                .HasColumnName("price_currency")
                 .HasColumnType("char(3)")
                 .IsRequired();
         });

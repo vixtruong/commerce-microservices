@@ -22,8 +22,15 @@ public sealed class EfUnitOfWork<TDbContext> : IUnitOfWork
     }
 
     /// <inheritdoc />
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            throw new OptimisticConcurrencyException("A stale aggregate version was rejected.", exception);
+        }
     }
 }

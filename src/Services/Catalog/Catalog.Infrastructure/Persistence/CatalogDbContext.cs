@@ -1,4 +1,4 @@
-using Catalog.Domain.Inventory;
+using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using Commerce.BuildingBlocks.Infrastructure.Persistence;
 using MediatR;
@@ -26,15 +26,14 @@ public sealed class CatalogDbContext : DomainEventsDbContext
     /// </summary>
     public DbSet<Product> Products => Set<Product>();
 
-    /// <summary>
-    /// Gets inventory balances tracked for Catalog products.
-    /// </summary>
-    public DbSet<StockItem> StockItems => Set<StockItem>();
+    /// <summary>Gets categories owned by the Catalog service.</summary>
+    public DbSet<Category> Categories => Set<Category>();
 
-    /// <summary>
-    /// Gets stock reservations created for orders.
-    /// </summary>
-    public DbSet<StockReservation> StockReservations => Set<StockReservation>();
+    /// <summary>Gets transactional integration messages awaiting publication.</summary>
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    /// <summary>Gets successfully handled integration messages.</summary>
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     /// <summary>
     /// Applies all Catalog entity configurations from the infrastructure assembly.
@@ -44,6 +43,7 @@ public sealed class CatalogDbContext : DomainEventsDbContext
     {
         modelBuilder.HasDefaultSchema("catalog");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
+        modelBuilder.ConfigureCommerceMessaging();
 
         base.OnModelCreating(modelBuilder);
     }

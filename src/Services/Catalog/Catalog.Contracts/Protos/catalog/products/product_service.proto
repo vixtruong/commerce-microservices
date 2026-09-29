@@ -6,7 +6,7 @@ package catalog.products.v1;
 
 import "catalog/products/product_messages.proto";
 
-service ProductGrpc {
-  rpc GetProductById(GetProductByIdRequest) returns (ProductReply);
-  rpc CreateProduct(CreateProductRequest) returns (CreateProductReply);
+service CatalogInternalGrpc {
+  rpc GetProduct(GetProductRequest) returns (ProductReply);
+  rpc GetProducts(GetProductsRequest) returns (GetProductsReply);
 }

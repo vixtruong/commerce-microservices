@@ -1,0 +1,12 @@
+**/bin
+**/obj
+.git
+.vs
+.idea
+.vscode
+TestResults
+coverage
+*.user
+*.suo
+.env
+appsettings.Local.json

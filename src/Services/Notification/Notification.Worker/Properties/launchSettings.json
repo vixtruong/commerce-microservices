@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Notification.Worker": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:53822;http://localhost:53823"
+    }
+  }
+}

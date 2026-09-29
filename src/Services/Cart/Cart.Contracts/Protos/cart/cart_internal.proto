@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option csharp_namespace = "Cart.Contracts.Grpc";
+package cart.internal.v1;
+
+service CartInternalGrpc {
+  rpc GetCartForCheckout (GetCartForCheckoutRequest) returns (CartSnapshotReply);
+}
+
+message GetCartForCheckoutRequest {
+  string customer_id = 1;
+}
+
+message CartSnapshotReply {
+  string customer_id = 1;
+  repeated CartItemReply items = 2;
+}
+
+message CartItemReply {
+  string product_id = 1;
+  string sku = 2;
+  string product_name = 3;
+  string unit_price = 4;
+  string currency = 5;
+  int32 quantity = 6;
+}

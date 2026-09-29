@@ -2,6 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ordering.Domain\Ordering.Domain.csproj" />
+    <ProjectReference Include="..\Ordering.Contracts\Ordering.Contracts.csproj" />
+    <ProjectReference Include="..\..\Inventory\Inventory.Contracts\Inventory.Contracts.csproj" />
+    <ProjectReference Include="..\..\Payment\Payment.Contracts\Payment.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shipping\Shipping.Contracts\Shipping.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Commerce.BuildingBlocks.Application\Commerce.BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

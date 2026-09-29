@@ -402,6 +402,15 @@ dotnet test
 
 ---
 
+## Postman API Synchronization
+
+- Whenever public REST endpoints, Gateway routes, request or response DTOs, authentication behavior, or end-to-end workflows change, inspect and update the `Commerce Microservices API` Postman collection using the Postman MCP server.
+- Treat the application source code as the source of truth for Postman requests, scripts, tests, and environment variables.
+- Route all normal public requests through Commerce.Gateway and YARP. Do not expose internal gRPC or RabbitMQ operations as public HTTP requests.
+- Never upload production secrets to Postman.
+
+---
+
 ## Final Quality Checklist
 
 Before finishing, Codex must verify:

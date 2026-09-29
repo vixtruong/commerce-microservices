@@ -1,11 +1,14 @@
 using Catalog.Application.Abstractions;
+using Catalog.Infrastructure.Caching;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Persistence.Repositories;
 using Commerce.BuildingBlocks.Application.Persistence;
 using Commerce.BuildingBlocks.Infrastructure.Persistence;
+using Commerce.BuildingBlocks.Infrastructure.Health;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 
 namespace Catalog.Infrastructure;
 
@@ -39,17 +42,19 @@ public static class DependencyInjection
 
         services.AddDbContext<CatalogDbContext>(options =>
         {
-            options.UseSqlServer(
+            options.UseNpgsql(
                 connectionString,
-                sqlServerOptions =>
+                npgsqlOptions =>
                 {
-                    sqlServerOptions.MigrationsAssembly(
+                    npgsqlOptions.MigrationsAssembly(
                         typeof(CatalogDbContext).Assembly.FullName);
-
-                    sqlServerOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3);
+                    npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
                 });
         });
+
+        string redisConnection = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Connection string 'Redis' was not configured.");
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
 
         services.AddScoped<
             IUnitOfWork,
@@ -58,10 +63,9 @@ public static class DependencyInjection
         services.AddScoped<
             IProductRepository,
             ProductRepository>();
-
-        services.AddScoped<
-            IStockItemRepository,
-            StockItemRepository>();
+        services.AddSingleton<IProductCache, RedisProductCache>();
+        services.AddPostgresReadiness<CatalogDbContext>();
+        services.AddRedisReadiness();
 
         return services;
     }

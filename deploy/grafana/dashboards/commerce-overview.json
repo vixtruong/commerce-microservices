@@ -1,0 +1,31 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP request rate",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (exported_job) (rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "{{exported_job}}" }
+      ],
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP p95 latency",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le, exported_job) (rate(http_server_request_duration_seconds_bucket[5m])))", "legendFormat": "{{exported_job}}" }
+      ],
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 }
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": ["commerce", "opentelemetry"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "title": "Commerce overview",
+  "uid": "commerce-overview",
+  "version": 1
+}

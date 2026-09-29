@@ -5,13 +5,19 @@ using MediatR;
 
 namespace Catalog.Application.Products.Queries.GetProductById
 {
-    public class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, Result<ProductResponse>>
+    /// <summary>Implements a cache-aside product lookup.</summary>
+    public sealed class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, Result<ProductResponse>>
     {
         private readonly IProductRepository _productRepository;
+        private readonly IProductCache _productCache;
 
-        public GetProductByIdQueryHandler(IProductRepository productRepository)
+        /// <summary>Initializes the query handler.</summary>
+        /// <param name="productRepository">Authoritative Catalog repository.</param>
+        /// <param name="productCache">Redis response cache.</param>
+        public GetProductByIdQueryHandler(IProductRepository productRepository, IProductCache productCache)
         {
             _productRepository = productRepository;
+            _productCache = productCache;
         }
 
         /// <summary>
@@ -31,6 +37,12 @@ namespace Catalog.Application.Products.Queries.GetProductById
 
             ProductId productId = ProductId.From(request.ProductId);
 
+            ProductResponse? cached = await _productCache.GetAsync(request.ProductId, cancellationToken);
+            if (cached is not null)
+            {
+                return cached;
+            }
+
             Product? product = await _productRepository.GetByIdAsync(productId, cancellationToken);
 
             if (product is null)
@@ -48,6 +60,8 @@ namespace Catalog.Application.Products.Queries.GetProductById
                 product.Status.ToString(),
                 product.CreatedAtUtc,
                 product.UpdatedAtUtc);
+
+            await _productCache.SetAsync(response, cancellationToken);
 
             return response;
         }

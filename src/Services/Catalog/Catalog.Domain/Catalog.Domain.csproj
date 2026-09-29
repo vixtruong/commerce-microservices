@@ -7,20 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="C:\Users\HCM-DEV01\Desktop\Commerce.Persistence.Starter\src\Services\Catalog\Catalog.Domain\Media\Events\ProductVideoAvailableDomainEvent.cs" Link="Media\Events\ProductVideoAvailableDomainEvent.cs" />
-    <Compile Include="C:\Users\HCM-DEV01\Desktop\Commerce.Persistence.Starter\src\Services\Catalog\Catalog.Domain\Media\MediaAsset.cs" Link="Media\MediaAsset.cs" />
-    <Compile Include="C:\Users\HCM-DEV01\Desktop\Commerce.Persistence.Starter\src\Services\Catalog\Catalog.Domain\Media\MediaAssetId.cs" Link="Media\MediaAssetId.cs" />
-    <Compile Include="C:\Users\HCM-DEV01\Desktop\Commerce.Persistence.Starter\src\Services\Catalog\Catalog.Domain\Media\MediaAssetStatus.cs" Link="Media\MediaAssetStatus.cs" />
-    <Compile Include="C:\Users\HCM-DEV01\Desktop\Commerce.Persistence.Starter\src\Services\Catalog\Catalog.Domain\Media\MediaAssetType.cs" Link="Media\MediaAssetType.cs" />
-    <Compile Include="C:\Users\HCM-DEV01\Desktop\Commerce.Persistence.Starter\src\Services\Catalog\Catalog.Domain\Media\MediaErrors.cs" Link="Media\MediaErrors.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Commerce.BuildingBlocks.Domain\Commerce.BuildingBlocks.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Media\Events\" />
   </ItemGroup>
 
 </Project>

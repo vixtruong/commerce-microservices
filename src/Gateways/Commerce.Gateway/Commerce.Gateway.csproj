@@ -1,14 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
-    <PackageReference Include="HotChocolate.AspNetCore" Version="16.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Services\Catalog\Catalog.Contracts\Catalog.Contracts.csproj" />
-    <ProjectReference Include="..\..\Services\Ordering\Ordering.Contracts\Ordering.Contracts.csproj" />
-    <ProjectReference Include="..\..\BuildingBlocks\Commerce.BuildingBlocks.Api\Commerce.BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Commerce.BuildingBlocks.Infrastructure\Commerce.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 

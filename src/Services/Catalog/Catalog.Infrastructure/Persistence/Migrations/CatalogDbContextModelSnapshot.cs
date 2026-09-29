@@ -3,8 +3,8 @@ using System;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -19,136 +19,142 @@ namespace Catalog.Infrastructure.Persistence.Migrations
             modelBuilder
                 .HasDefaultSchema("catalog")
                 .HasAnnotation("ProductVersion", "10.0.9")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Catalog.Domain.Inventory.StockItem", b =>
+            modelBuilder.Entity("Catalog.Domain.Categories.Category", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("ProductId");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("QuantityOnHand")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
-                    b.Property<int>("ReservedQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("StockItems", "catalog");
-                });
-
-            modelBuilder.Entity("Catalog.Domain.Inventory.StockReservation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset?>("CompletedAtUtc")
-                        .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
-
-                    b.Property<string>("CompletionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
-
-                    b.Property<DateTimeOffset>("ExpiresAtUtc")
-                        .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("Slug")
+                        .IsUnique();
 
-                    b.HasIndex("OrderId", "ProductId");
-
-                    b.ToTable("StockReservations", "catalog");
+                    b.ToTable("categories", "catalog");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
+                        .HasColumnType("timestamp(0) with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Sku")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasPrecision(0)
-                        .HasColumnType("datetimeoffset(0)");
+                        .HasColumnType("timestamp(0) with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Sku")
                         .IsUnique();
 
-                    b.ToTable("Products", "catalog");
+                    b.ToTable("products", "catalog");
                 });
 
-            modelBuilder.Entity("Catalog.Domain.Inventory.StockItem", b =>
+            modelBuilder.Entity("Commerce.BuildingBlocks.Infrastructure.Persistence.InboxMessage", b =>
                 {
-                    b.HasOne("Catalog.Domain.Products.Product", null)
-                        .WithOne()
-                        .HasForeignKey("Catalog.Domain.Inventory.StockItem", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Consumer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("ProcessedOnUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId", "Consumer");
+
+                    b.ToTable("inbox_messages", "catalog");
                 });
 
-            modelBuilder.Entity("Catalog.Domain.Inventory.StockReservation", b =>
+            modelBuilder.Entity("Commerce.BuildingBlocks.Infrastructure.Persistence.OutboxMessage", b =>
                 {
-                    b.HasOne("Catalog.Domain.Inventory.StockItem", null)
-                        .WithMany("Reservations")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LockedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("OccurredOnUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("ProcessedOnUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessedOnUtc", "OccurredOnUtc");
+
+                    b.ToTable("outbox_messages", "catalog");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
@@ -156,21 +162,21 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.OwnsOne("Catalog.Domain.Common.Money", "Price", b1 =>
                         {
                             b1.Property<Guid>("ProductId")
-                                .HasColumnType("uniqueidentifier");
+                                .HasColumnType("uuid");
 
                             b1.Property<decimal>("Amount")
                                 .HasPrecision(18, 2)
-                                .HasColumnType("decimal(18,2)")
-                                .HasColumnName("PriceAmount");
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("price_amount");
 
                             b1.Property<string>("Currency")
                                 .IsRequired()
                                 .HasColumnType("char(3)")
-                                .HasColumnName("PriceCurrency");
+                                .HasColumnName("price_currency");
 
                             b1.HasKey("ProductId");
 
-                            b1.ToTable("Products", "catalog");
+                            b1.ToTable("products", "catalog");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductId");
@@ -178,11 +184,6 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Price")
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Catalog.Domain.Inventory.StockItem", b =>
-                {
-                    b.Navigation("Reservations");
                 });
 #pragma warning restore 612, 618
         }

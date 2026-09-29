@@ -4,28 +4,23 @@ option csharp_namespace = "Catalog.Contracts.Grpc.Products";
 
 package catalog.products.v1;
 
-message GetProductByIdRequest {
+message GetProductRequest {
   string product_id = 1;
 }
 
-message CreateProductRequest {
-  string sku = 1;
-  string name = 2;
-  string description = 3;
-  string price_amount = 4;
-  string price_currency = 5;
+message GetProductsRequest {
+  repeated string product_ids = 1;
 }
 
-message CreateProductReply {
-  string product_id = 1;
+message GetProductsReply {
+  repeated ProductReply products = 1;
 }
 
 message ProductReply {
   string id = 1;
   string sku = 2;
   string name = 3;
-  string description = 4;
-  string price_amount = 5;
-  string price_currency = 6;
-  string status = 7;
+  string price_amount = 4;
+  string price_currency = 5;
+  bool is_active = 6;
 }

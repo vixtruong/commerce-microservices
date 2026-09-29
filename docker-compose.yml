@@ -1,0 +1,355 @@
+name: commerce
+
+x-app-environment: &app-environment
+  ASPNETCORE_ENVIRONMENT: Development
+  DOTNET_ENVIRONMENT: Development
+  Jwt__Issuer: ${JWT_ISSUER:?copy .env.example to .env}
+  Jwt__Audience: ${JWT_AUDIENCE:?copy .env.example to .env}
+  Jwt__SigningKey: ${JWT_SIGNING_KEY:?copy .env.example to .env}
+  RabbitMq__ConnectionString: amqp://${RABBITMQ_DEFAULT_USER:?copy .env.example to .env}:${RABBITMQ_DEFAULT_PASS:?copy .env.example to .env}@rabbitmq:5672
+  RabbitMq__ExchangeName: commerce.events
+  RabbitMq__DeadLetterExchangeName: commerce.events.dlx
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local
+
+x-api-healthcheck: &api-healthcheck
+  test: [CMD, curl, --fail, --silent, http://localhost:8080/health/ready]
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 20s
+
+x-api-deploy: &api-deploy
+  restart: unless-stopped
+  networks: [commerce]
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-databases.sql:ro
+    ports:
+      # Bind only to the local machine so database GUI tools can connect without exposing PostgreSQL to the LAN.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks: [commerce]
+
+  redis:
+    image: redis:8-alpine
+    command: [redis-server, --appendonly, "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks: [commerce]
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?copy .env.example to .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?copy .env.example to .env}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./deploy/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks: [commerce]
+
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.21.0
+    ports:
+      - "16686:16686"
+    restart: unless-stopped
+    networks: [commerce]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.160.0
+    command: [--config=/etc/otelcol-contrib/config.yaml]
+    volumes:
+      - ./deploy/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      - jaeger
+    restart: unless-stopped
+    networks: [commerce]
+
+  prometheus:
+    image: prom/prometheus:v3.13.3
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus]
+    volumes:
+      - ./deploy/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+    networks: [commerce]
+
+  grafana:
+    image: grafana/grafana:13.2.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?copy .env.example to .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?copy .env.example to .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks: [commerce]
+
+  identity-api:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Identity/Identity.Api/Identity.Api.csproj
+        ASSEMBLY_NAME: Identity.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__IdentityDb: Host=postgres;Port=5432;Database=commerce_identity;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      DevelopmentSeed__Enabled: "true"
+      DevelopmentSeed__CustomerPassword: ${CUSTOMER_PASSWORD:?copy .env.example to .env}
+      DevelopmentSeed__AdminPassword: ${ADMIN_PASSWORD:?copy .env.example to .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  catalog-api-1:
+    <<: *api-deploy
+    hostname: catalog-api-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Catalog/Catalog.Api/Catalog.Api.csproj
+        ASSEMBLY_NAME: Catalog.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__CatalogDb: Host=postgres;Port=5432;Database=commerce_catalog;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      Kestrel__Endpoints__Http__Url: http://+:8080
+      Kestrel__Endpoints__Http__Protocols: Http1
+      Kestrel__Endpoints__Grpc__Url: http://+:8081
+      Kestrel__Endpoints__Grpc__Protocols: Http2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  catalog-api-2:
+    <<: *api-deploy
+    hostname: catalog-api-2
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Catalog/Catalog.Api/Catalog.Api.csproj
+        ASSEMBLY_NAME: Catalog.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__CatalogDb: Host=postgres;Port=5432;Database=commerce_catalog;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      Kestrel__Endpoints__Http__Url: http://+:8080
+      Kestrel__Endpoints__Http__Protocols: Http1
+      Kestrel__Endpoints__Grpc__Url: http://+:8081
+      Kestrel__Endpoints__Grpc__Protocols: Http2
+    depends_on:
+      catalog-api-1:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  cart-api:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Cart/Cart.Api/Cart.Api.csproj
+        ASSEMBLY_NAME: Cart.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__Redis: redis:6379
+      Grpc__Catalog: http://catalog-api-1:8081
+      Kestrel__Endpoints__Http__Url: http://+:8080
+      Kestrel__Endpoints__Http__Protocols: Http1
+      Kestrel__Endpoints__Grpc__Url: http://+:8081
+      Kestrel__Endpoints__Grpc__Protocols: Http2
+    depends_on:
+      redis:
+        condition: service_healthy
+      catalog-api-1:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  inventory-api:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Inventory/Inventory.Api/Inventory.Api.csproj
+        ASSEMBLY_NAME: Inventory.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__InventoryDb: Host=postgres;Port=5432;Database=commerce_inventory;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      InventoryExpiration__IntervalSeconds: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  ordering-api:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Ordering/Ordering.Api/Ordering.Api.csproj
+        ASSEMBLY_NAME: Ordering.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__OrderingDb: Host=postgres;Port=5432;Database=commerce_ordering;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      Grpc__Cart: http://cart-api:8081
+      Grpc__Catalog: http://catalog-api-1:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      cart-api:
+        condition: service_healthy
+      catalog-api-1:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  payment-api:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Payment/Payment.Api/Payment.Api.csproj
+        ASSEMBLY_NAME: Payment.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__PaymentDb: Host=postgres;Port=5432;Database=commerce_payment;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      FakePayment__Outcome: ${PAYMENT_OUTCOME:-Success}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  shipping-api:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Shipping/Shipping.Api/Shipping.Api.csproj
+        ASSEMBLY_NAME: Shipping.Api
+    environment:
+      <<: *app-environment
+      ConnectionStrings__ShippingDb: Host=postgres;Port=5432;Database=commerce_shipping;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  notification-worker:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Notification/Notification.Worker/Notification.Worker.csproj
+        ASSEMBLY_NAME: Notification.Worker
+    environment:
+      <<: *app-environment
+      ConnectionStrings__NotificationDb: Host=postgres;Port=5432;Database=commerce_notification;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  commerce-gateway:
+    <<: *api-deploy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Gateways/Commerce.Gateway/Commerce.Gateway.csproj
+        ASSEMBLY_NAME: Commerce.Gateway
+    environment:
+      <<: *app-environment
+    ports:
+      - "8080:8080"
+    depends_on:
+      identity-api:
+        condition: service_healthy
+      catalog-api-1:
+        condition: service_healthy
+      catalog-api-2:
+        condition: service_healthy
+      cart-api:
+        condition: service_healthy
+      inventory-api:
+        condition: service_healthy
+      ordering-api:
+        condition: service_healthy
+      payment-api:
+        condition: service_healthy
+      shipping-api:
+        condition: service_healthy
+    healthcheck: *api-healthcheck
+
+networks:
+  commerce:
+    name: commerce-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  prometheus-data:
+  grafana-data:

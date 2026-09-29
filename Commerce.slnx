@@ -1,27 +1,83 @@
 <Solution>
   <Folder Name="/BuildingBlocks/">
-    <Project Path="src/BuildingBlocks/Commerce.BuildingBlocks.Api/Commerce.BuildingBlocks.Api.csproj" />
     <Project Path="src/BuildingBlocks/Commerce.BuildingBlocks.Application/Commerce.BuildingBlocks.Application.csproj" />
     <Project Path="src/BuildingBlocks/Commerce.BuildingBlocks.Contracts/Commerce.BuildingBlocks.Contracts.csproj" />
     <Project Path="src/BuildingBlocks/Commerce.BuildingBlocks.Domain/Commerce.BuildingBlocks.Domain.csproj" />
     <Project Path="src/BuildingBlocks/Commerce.BuildingBlocks.Infrastructure/Commerce.BuildingBlocks.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Gateways/">
-    <Project Path="src/Gateways/Commerce.Gateway/Commerce.Gateway.csproj" />
+  <Folder Name="/Docs/">
+    <File Path="docs/architecture.md" />
+    <File Path="docs/local-infrastructure-guide.md" />
   </Folder>
-  <Folder Name="/Services/" />
-  <Folder Name="/Services/Ordering/">
-    <Project Path="src/Services/Ordering/Ordering.Api/Ordering.Api.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Application/Ordering.Application.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Contracts/Ordering.Contracts.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
-    <Project Path="src/Services/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+  <Folder Name="/Docs/ADR/">
+    <File Path="docs/adr/0001-yarp-api-gateway.md" />
+    <File Path="docs/adr/0002-internal-grpc.md" />
+    <File Path="docs/adr/0003-rabbitmq-integration-events.md" />
+    <File Path="docs/adr/0004-database-per-service.md" />
+    <File Path="docs/adr/0005-outbox-inbox.md" />
+    <File Path="docs/adr/0006-ordering-saga.md" />
+    <File Path="docs/adr/0007-redis-responsibilities.md" />
+    <File Path="docs/adr/0008-postgresql.md" />
+  </Folder>
+  <Folder Name="/Docker/">
+    <File Path=".dockerignore" />
+    <File Path=".env.example" />
+    <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
+  </Folder>
+  <Folder Name="/Docker/Deploy/">
+    <File Path="deploy/otel-collector.yaml" />
+    <File Path="deploy/prometheus.yaml" />
+  </Folder>
+  <Folder Name="/Docker/Deploy/Grafana/">
+    <File Path="deploy/grafana/dashboards/commerce-overview.json" />
+    <File Path="deploy/grafana/provisioning/dashboards/commerce.yaml" />
+    <File Path="deploy/grafana/provisioning/datasources/prometheus.yaml" />
+  </Folder>
+  <Folder Name="/Docker/Deploy/PostgreSQL/">
+    <File Path="deploy/postgres/init-databases.sql" />
+  </Folder>
+  <Folder Name="/Docker/Deploy/RabbitMQ/">
+    <File Path="deploy/rabbitmq/enabled_plugins" />
+  </Folder>
+  <Folder Name="/Gateways/"><Project Path="src/Gateways/Commerce.Gateway/Commerce.Gateway.csproj" /></Folder>
+  <Folder Name="/Scripts/">
+    <File Path="scripts/smoke-test-payment-failure.ps1" />
+    <File Path="scripts/smoke-test.ps1" />
+    <File Path="scripts/smoke-test.sh" />
   </Folder>
   <Folder Name="/Services/Catalog/">
-    <Project Path="src/Services/Catalog/Catalog.Api/Catalog.Api.csproj" />
-    <Project Path="src/Services/Catalog/Catalog.Application/Catalog.Application.csproj" />
-    <Project Path="src/Services/Catalog/Catalog.Contracts/Catalog.Contracts.csproj" />
-    <Project Path="src/Services/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
-    <Project Path="src/Services/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
+    <Project Path="src/Services/Catalog/Catalog.Api/Catalog.Api.csproj" /><Project Path="src/Services/Catalog/Catalog.Application/Catalog.Application.csproj" /><Project Path="src/Services/Catalog/Catalog.Contracts/Catalog.Contracts.csproj" /><Project Path="src/Services/Catalog/Catalog.Domain/Catalog.Domain.csproj" /><Project Path="src/Services/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Inventory/">
+    <Project Path="src/Services/Inventory/Inventory.Api/Inventory.Api.csproj" /><Project Path="src/Services/Inventory/Inventory.Application/Inventory.Application.csproj" /><Project Path="src/Services/Inventory/Inventory.Contracts/Inventory.Contracts.csproj" /><Project Path="src/Services/Inventory/Inventory.Domain/Inventory.Domain.csproj" /><Project Path="src/Services/Inventory/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Cart/">
+    <Project Path="src/Services/Cart/Cart.Api/Cart.Api.csproj" /><Project Path="src/Services/Cart/Cart.Application/Cart.Application.csproj" /><Project Path="src/Services/Cart/Cart.Contracts/Cart.Contracts.csproj" /><Project Path="src/Services/Cart/Cart.Infrastructure/Cart.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Ordering/">
+    <Project Path="src/Services/Ordering/Ordering.Api/Ordering.Api.csproj" /><Project Path="src/Services/Ordering/Ordering.Application/Ordering.Application.csproj" /><Project Path="src/Services/Ordering/Ordering.Contracts/Ordering.Contracts.csproj" /><Project Path="src/Services/Ordering/Ordering.Domain/Ordering.Domain.csproj" /><Project Path="src/Services/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Payment/">
+    <Project Path="src/Services/Payment/Payment.Api/Payment.Api.csproj" /><Project Path="src/Services/Payment/Payment.Application/Payment.Application.csproj" /><Project Path="src/Services/Payment/Payment.Contracts/Payment.Contracts.csproj" /><Project Path="src/Services/Payment/Payment.Domain/Payment.Domain.csproj" /><Project Path="src/Services/Payment/Payment.Infrastructure/Payment.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Shipping/">
+    <Project Path="src/Services/Shipping/Shipping.Api/Shipping.Api.csproj" /><Project Path="src/Services/Shipping/Shipping.Application/Shipping.Application.csproj" /><Project Path="src/Services/Shipping/Shipping.Contracts/Shipping.Contracts.csproj" /><Project Path="src/Services/Shipping/Shipping.Domain/Shipping.Domain.csproj" /><Project Path="src/Services/Shipping/Shipping.Infrastructure/Shipping.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Notification/">
+    <Project Path="src/Services/Notification/Notification.Application/Notification.Application.csproj" /><Project Path="src/Services/Notification/Notification.Contracts/Notification.Contracts.csproj" /><Project Path="src/Services/Notification/Notification.Infrastructure/Notification.Infrastructure.csproj" /><Project Path="src/Services/Notification/Notification.Worker/Notification.Worker.csproj" />
+  </Folder>
+  <Folder Name="/Services/Identity/">
+    <Project Path="src/Services/Identity/Identity.Api/Identity.Api.csproj" /><Project Path="src/Services/Identity/Identity.Application/Identity.Application.csproj" /><Project Path="src/Services/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Payment.Application.Tests/Payment.Application.Tests.csproj" />
+    <Project Path="tests/Catalog.Domain.Tests/Catalog.Domain.Tests.csproj" /><Project Path="tests/Inventory.Domain.Tests/Inventory.Domain.Tests.csproj" /><Project Path="tests/Ordering.Domain.Tests/Ordering.Domain.Tests.csproj" /><Project Path="tests/Payment.Domain.Tests/Payment.Domain.Tests.csproj" /><Project Path="tests/Architecture.Tests/Architecture.Tests.csproj" /><Project Path="tests/Commerce.IntegrationTests/Commerce.IntegrationTests.csproj" />
   </Folder>
 </Solution>
