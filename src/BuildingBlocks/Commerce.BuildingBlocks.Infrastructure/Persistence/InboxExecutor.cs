@@ -26,24 +26,32 @@ public static class InboxExecutor
         where TDbContext : DbContext
         where TEvent : IIntegrationEvent
     {
-        bool processed = await dbContext.Set<InboxMessage>()
-            .AsNoTracking()
-            .AnyAsync(message => message.MessageId == integrationEvent.MessageId && message.Consumer == consumer,
-                cancellationToken);
-        if (processed)
-        {
-            return;
-        }
+        var executionStrategy = dbContext.Database.CreateExecutionStrategy();
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        await mutation(cancellationToken);
-        dbContext.Set<InboxMessage>().Add(new InboxMessage
+        // The execution strategy must create and execute the complete transaction so transient PostgreSQL
+        // failures can retry the inbox check, business mutation, and inbox insert as one unit.
+        await executionStrategy.ExecuteAsync(async () =>
         {
-            MessageId = integrationEvent.MessageId,
-            Consumer = consumer,
-            ProcessedOnUtc = DateTimeOffset.UtcNow
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            bool processed = await dbContext.Set<InboxMessage>()
+                .AsNoTracking()
+                .AnyAsync(message => message.MessageId == integrationEvent.MessageId && message.Consumer == consumer,
+                    cancellationToken);
+            if (processed)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return;
+            }
+
+            await mutation(cancellationToken);
+            dbContext.Set<InboxMessage>().Add(new InboxMessage
+            {
+                MessageId = integrationEvent.MessageId,
+                Consumer = consumer,
+                ProcessedOnUtc = DateTimeOffset.UtcNow
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         });
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
     }
 }

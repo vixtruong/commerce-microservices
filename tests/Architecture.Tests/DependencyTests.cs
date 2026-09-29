@@ -52,4 +52,38 @@ public sealed class DependencyTests
             reference.StartsWith("Payment.", StringComparison.Ordinal) ||
             reference.StartsWith("Shipping.", StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// Verifies that every explicit EF Core transaction is controlled by an execution strategy that supports
+    /// retrying the complete transaction after a transient PostgreSQL failure.
+    /// </summary>
+    [Fact]
+    public void ExplicitDatabaseTransactions_UseExecutionStrategy()
+    {
+        string sourceRoot = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src"));
+
+        Assert.True(Directory.Exists(sourceRoot), $"Source directory was not found: {sourceRoot}");
+
+        string[] transactionFiles = Directory
+            .EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(path => File.ReadAllText(path).Contains("BeginTransactionAsync", StringComparison.Ordinal))
+            .ToArray();
+
+        foreach (string transactionFile in transactionFiles)
+        {
+            string source = File.ReadAllText(transactionFile);
+
+            // Npgsql rejects a user-created transaction unless the whole unit runs through this strategy.
+            Assert.Contains("CreateExecutionStrategy", source, StringComparison.Ordinal);
+        }
+    }
 }
