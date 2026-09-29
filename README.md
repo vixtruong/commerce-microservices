@@ -158,12 +158,13 @@ These are deliberately local credentials. Change all `.env` values outside an is
 | --- | --- |
 | Gateway | <http://localhost:8080> |
 | PostgreSQL | `127.0.0.1:${POSTGRES_PORT:-5432}` |
+| Redis | `127.0.0.1:${REDIS_PORT:-6379}` |
 | RabbitMQ Management | <http://localhost:15672> |
 | Jaeger | <http://localhost:16686> |
 | Prometheus | <http://localhost:9090> |
 | Grafana | <http://localhost:3000> |
 
-PostgreSQL is bound to the local loopback interface for database management tools. Application service ports, Redis, RabbitMQ AMQP, and OTLP remain on the private `commerce-network`. OpenAPI documents are available when an individual API is run or temporarily exposed in Development.
+PostgreSQL and Redis are bound to the local loopback interface for database management tools. Application service ports, RabbitMQ AMQP, and OTLP remain on the private `commerce-network`. OpenAPI documents are available when an individual API is run or temporarily exposed in Development.
 
 For the complete component, protocol, data ownership, Saga, and observability map, see [`docs/architecture.md`](docs/architecture.md). For PostgreSQL GUI connection settings and step-by-step Grafana, Prometheus, Jaeger, RabbitMQ, Redis, health, and log workflows, see [`docs/local-infrastructure-guide.md`](docs/local-infrastructure-guide.md).
 
@@ -242,7 +243,7 @@ Structured Serilog output is visible with:
 docker compose logs -f ordering-api inventory-api payment-api
 ```
 
-HTTP, runtime, outgoing service calls, and RabbitMQ producer/consumer spans export over OTLP. W3C trace context is copied into RabbitMQ headers, so Jaeger can connect the Gateway/Ordering request to asynchronous Inventory, Payment, Shipping, and Notification work. The collector exposes metrics to Prometheus; Grafana is provisioned with its Prometheus data source and a starter Commerce dashboard.
+HTTP, runtime, outgoing service calls, and RabbitMQ producer/consumer spans export over OTLP. W3C trace context is copied into RabbitMQ headers, so Jaeger can connect the Gateway/Ordering request to asynchronous Inventory, Payment, Shipping, and Notification work. The collector exposes application metrics and its own internal pipeline metrics to Prometheus. Grafana is provisioned with a comprehensive **Commerce System Overview** dashboard for Gateway, services, .NET runtime, OpenTelemetry Collector, and RabbitMQ queue-level monitoring.
 
 ## Local CLI development and migrations
 

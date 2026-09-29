@@ -23,12 +23,13 @@ The normal URLs are:
 | --- | --- | --- |
 | Commerce Gateway | <http://localhost:8080> | JWT for protected APIs |
 | PostgreSQL | `127.0.0.1:${POSTGRES_PORT:-5432}` | `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` |
+| Redis | `127.0.0.1:${REDIS_PORT:-6379}` | None in local development |
 | RabbitMQ Management | <http://localhost:15672> | `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from `.env` |
 | Jaeger | <http://localhost:16686> | None in local development |
 | Prometheus | <http://localhost:9090> | None in local development |
 | Grafana | <http://localhost:3000> | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` from `.env` |
 
-`POSTGRES_PORT` defaults to `5432`. If that port is already occupied, set a different host port such as `POSTGRES_PORT=55432` in `.env`, then run `docker compose up -d postgres`.
+`POSTGRES_PORT` defaults to `5432` and `REDIS_PORT` defaults to `6379`. If either port is occupied, set a different host port in `.env`, then recreate the corresponding container.
 
 ## Connect a database management application
 
@@ -76,18 +77,18 @@ Useful read-only starting points:
 ```sql
 -- Execute in commerce_ordering.
 SELECT "Id", "OrderNumber", "Status", "CreatedAtUtc"
-FROM "Orders"
+FROM ordering.orders
 ORDER BY "CreatedAtUtc" DESC
 LIMIT 20;
 
-SELECT "Id", "Type", "OccurredAtUtc", "ProcessedAtUtc", "Attempts"
-FROM "OutboxMessages"
-ORDER BY "OccurredAtUtc" DESC
+SELECT "Id", "Type", "OccurredOnUtc", "ProcessedOnUtc", "RetryCount"
+FROM ordering.outbox_messages
+ORDER BY "OccurredOnUtc" DESC
 LIMIT 20;
 
-SELECT "MessageId", "Consumer", "ProcessedAtUtc"
-FROM "InboxMessages"
-ORDER BY "ProcessedAtUtc" DESC
+SELECT "MessageId", "Consumer", "ProcessedOnUtc"
+FROM ordering.inbox_messages
+ORDER BY "ProcessedOnUtc" DESC
 LIMIT 20;
 ```
 
@@ -114,14 +115,18 @@ For continuous sample traffic, repeat safe reads in another terminal:
 
 1. Open <http://localhost:3000>.
 2. Sign in with `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD` from `.env`.
-3. Open **Dashboards → Commerce → Commerce overview**.
-4. Set the time range to **Last 15 minutes** or **Last 30 minutes**.
+3. Open **Dashboards → Commerce → Commerce System Overview**.
+4. Use the **Service**, **Route**, and **Queue** filters to select the component under investigation.
 5. Run the smoke test or sample traffic and refresh the dashboard.
 
 The provisioned dashboard contains:
 
-- **HTTP request rate** grouped by `exported_job`, which is the OpenTelemetry service name after export to Prometheus.
-- **HTTP p95 latency** computed from the ASP.NET Core request-duration histogram.
+- system-wide traffic, p95 latency, HTTP error rate, service count, and Prometheus scrape health;
+- Gateway inbound routes and outbound calls to internal services;
+- per-service traffic, route latency, service-to-service calls, and exceptions;
+- .NET process CPU, working-set memory, GC pressure, thread-pool queue, and replica count;
+- OpenTelemetry Collector throughput, failed/refused signals, exporter queue, and resource usage;
+- RabbitMQ queue-level ready/unacknowledged messages, consumers, retry/dead-letter backlog, message flow, and broker resources.
 
 The Prometheus data source is provisioned automatically as the default and points to `http://prometheus:9090` inside Docker. No manual data-source URL is required.
 
@@ -138,10 +143,12 @@ Open <http://localhost:9090>.
 
 ### Check scrape health
 
-Open **Status → Target health** (or `/targets`). Both targets should be `UP`:
+Open **Status → Target health** (or `/targets`). All four targets should be `UP`:
 
 - `commerce-otel` scrapes the collector's Prometheus exporter.
-- `rabbitmq` scrapes the RabbitMQ Prometheus plugin.
+- `otel-collector-internal` scrapes the collector's own pipeline and process telemetry.
+- `rabbitmq` scrapes aggregate RabbitMQ broker metrics.
+- `rabbitmq-per-object` scrapes queue-level metrics from `/metrics/per-object`.
 
 Start troubleshooting with:
 
@@ -173,19 +180,19 @@ histogram_quantile(
 RabbitMQ ready messages by queue:
 
 ```promql
-sum by (queue) (rabbitmq_queue_messages_ready)
+sum by (queue) (rabbitmq_queue_messages_ready{job="rabbitmq-per-object"})
 ```
 
 RabbitMQ unacknowledged messages by queue:
 
 ```promql
-sum by (queue) (rabbitmq_queue_messages_unacked)
+sum by (queue) (rabbitmq_queue_messages_unacked{job="rabbitmq-per-object"})
 ```
 
 RabbitMQ consumers by queue:
 
 ```promql
-sum by (queue) (rabbitmq_queue_consumers)
+sum by (queue) (rabbitmq_queue_consumers{job="rabbitmq-per-object"})
 ```
 
 Prometheus is the metric query and storage layer; Grafana is the preferred dashboard and visualization layer.
@@ -244,9 +251,18 @@ Common failures are an invalid collector configuration, an unavailable Jaeger co
 
 ## Redis
 
-Redis intentionally remains private and has no host port. Inspect it safely inside the container:
+Redis is published only on the local loopback interface so RedisInsight, Navicat, or another local management client can inspect development data without exposing Redis to the LAN.
+
+| Setting | Value |
+| --- | --- |
+| Host | `127.0.0.1` |
+| Port | Value of `REDIS_PORT` in `.env`; default `6379` |
+| Authentication | None in local development |
+
+Validate the host connection or inspect Redis inside the container:
 
 ```powershell
+Test-NetConnection 127.0.0.1 -Port 6379
 docker compose exec redis redis-cli PING
 docker compose exec redis redis-cli --scan --pattern 'catalog:product:v1:*'
 docker compose exec redis redis-cli --scan --pattern 'cart:v1:*'
