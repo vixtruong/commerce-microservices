@@ -50,6 +50,8 @@ services:
     command: [redis-server, --appendonly, "yes"]
     volumes:
       - redis-data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: [CMD, redis-cli, ping]
       interval: 5s
