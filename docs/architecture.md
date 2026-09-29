@@ -83,7 +83,7 @@ flowchart TB
     Shipping --- Outbox
     Notification --- Inbox
     Outbox -->|persistent integration events| Rabbit
-    Rabbit -->|manual ack; bounded retry| Inbox
+    Rabbit -->|manual ack and bounded retry| Inbox
     Inbox --> Ordering
     Inbox --> Inventory
     Inbox --> Payment
@@ -173,7 +173,7 @@ sequenceDiagram
         RabbitMQ-->>Payment: Process payment idempotently
         alt payment succeeds
             Payment-->>RabbitMQ: PaymentSucceeded
-            RabbitMQ-->>Ordering: Mark order Paid; publish OrderPaid
+            RabbitMQ-->>Ordering: Mark order Paid and publish OrderPaid
             RabbitMQ-->>Inventory: Confirm and deduct reservation
             RabbitMQ-->>Shipping: Create shipment
             Shipping-->>RabbitMQ: ShipmentCreated
@@ -181,7 +181,7 @@ sequenceDiagram
             RabbitMQ-->>Notification: Record notifications
         else payment fails
             Payment-->>RabbitMQ: PaymentFailed
-            RabbitMQ-->>Ordering: Cancel order; request inventory release
+            RabbitMQ-->>Ordering: Cancel order and request inventory release
             RabbitMQ-->>Inventory: Release reservation
             RabbitMQ-->>Notification: Record failure notification
         end
