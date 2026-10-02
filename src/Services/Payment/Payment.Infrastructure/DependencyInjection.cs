@@ -24,6 +24,7 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Connection string 'PaymentDb' was not configured.");
         services.AddDbContext<PaymentDbContext>(options => options.UseNpgsql(database, npgsql => npgsql.EnableRetryOnFailure(3)));
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IPaymentReadStore, PaymentReadStore>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork<PaymentDbContext>>();
         services.Configure<FakePaymentOptions>(configuration.GetSection("FakePayment"));
         services.AddScoped<IPaymentGateway, FakePaymentGateway>();

@@ -1,3 +1,4 @@
+using Commerce.BuildingBlocks.Application.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Payment.Application.Payments;
@@ -7,7 +8,7 @@ namespace Payment.Api.Controllers;
 
 /// <summary>Provides an administrative read endpoint for fake-provider demonstration.</summary>
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = Permissions.PaymentRead)]
 [Route("api/payments")]
 public sealed class PaymentsController : ControllerBase
 {
