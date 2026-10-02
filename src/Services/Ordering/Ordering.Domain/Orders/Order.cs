@@ -82,6 +82,20 @@ public sealed class Order : AggregateRoot<OrderId>
     public DateTimeOffset UpdatedAtUtc { get; private set; }
     /// <summary>Gets the cancellation reason when cancelled.</summary>
     public string? CancellationReason { get; private set; }
+    /// <summary>Gets the shipment identifier announced by Shipping.</summary>
+    public Guid? ShipmentId { get; private set; }
+    /// <summary>Gets the tracking snapshot announced by Shipping.</summary>
+    public string? TrackingNumber { get; private set; }
+
+    /// <summary>Records fulfilment metadata after a paid order receives its shipment event.</summary>
+    /// <param name="shipmentId">Shipping aggregate identifier.</param>
+    /// <param name="trackingNumber">Non-sensitive tracking identifier.</param>
+    public void RecordShipment(Guid shipmentId, string trackingNumber)
+    {
+        // This snapshot lets customers read their own fulfilment without querying another service's database.
+        ShipmentId = shipmentId;
+        TrackingNumber = trackingNumber;
+    }
     /// <summary>Gets order-item snapshots.</summary>
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
     /// <summary>Gets the order total.</summary>

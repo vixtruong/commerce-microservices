@@ -42,7 +42,49 @@ public sealed record OrderResponse(
     string Currency,
     IReadOnlyCollection<OrderItemResponse> Items,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    /// <summary>Gets the customer identifier for authorized operational views.</summary>
+    public Guid CustomerId { get; init; }
+    /// <summary>Gets the immutable delivery address snapshot.</summary>
+    public ShippingAddressResponse? ShippingAddress { get; init; }
+    /// <summary>Gets the persisted process-manager state when queried individually.</summary>
+    public string? SagaStatus { get; init; }
+    /// <summary>Gets the safe cancellation code used for customer failure messages.</summary>
+    public string? CancellationReason { get; init; }
+    /// <summary>Gets the shipment identifier received from Shipping.</summary>
+    public Guid? ShipmentId { get; init; }
+    /// <summary>Gets the tracking snapshot received from Shipping.</summary>
+    public string? TrackingNumber { get; init; }
+}
+
+/// <summary>Contains the delivery address captured at checkout.</summary>
+/// <param name="RecipientName">Recipient.</param>
+/// <param name="Line1">Street address.</param>
+/// <param name="City">City.</param>
+/// <param name="PostalCode">Postal code.</param>
+/// <param name="CountryCode">Country code.</param>
+public sealed record ShippingAddressResponse(string RecipientName, string Line1, string City, string PostalCode, string CountryCode);
+
+/// <summary>Projects immutable Order snapshots without exposing aggregate instances.</summary>
+public static class OrderMappings
+{
+    /// <summary>Projects an order and its latest persisted workflow data.</summary>
+    /// <param name="order">Order aggregate.</param>
+    /// <returns>Safe HTTP response.</returns>
+    public static OrderResponse ToResponse(Order order) => new(
+        order.Id.Value, order.OrderNumber, order.Status.ToString(), order.TotalAmount, order.Currency,
+        order.Items.Select(item => new OrderItemResponse(item.ProductId, item.Sku, item.ProductName,
+            item.UnitPrice.Amount, item.UnitPrice.Currency, item.Quantity)).ToArray(), order.CreatedAtUtc, order.UpdatedAtUtc)
+    {
+        CustomerId = order.CustomerId,
+        ShippingAddress = new(order.ShippingAddress.RecipientName, order.ShippingAddress.Line1,
+            order.ShippingAddress.City, order.ShippingAddress.PostalCode, order.ShippingAddress.CountryCode),
+        CancellationReason = order.CancellationReason,
+        ShipmentId = order.ShipmentId,
+        TrackingNumber = order.TrackingNumber
+    };
+}
 
 /// <summary>Handles authenticated order queries.</summary>
 public sealed class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, Result<OrderResponse>>
