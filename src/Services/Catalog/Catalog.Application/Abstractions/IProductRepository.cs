@@ -36,12 +36,17 @@ namespace Catalog.Application.Abstractions
         /// <param name="skip">Number of rows to skip.</param>
         /// <param name="take">Bounded page size.</param>
         /// <param name="cancellationToken">Token used to cancel database I/O.</param>
+        /// <param name="status">Optional publication state.</param>
+        /// <param name="sort">Allowed sorting choice.</param>
+        /// <param name="minPrice">Optional lower price bound.</param>
+        /// <param name="maxPrice">Optional upper price bound.</param>
         /// <returns>The matching product page and total count.</returns>
         Task<(IReadOnlyCollection<Product> Products, int Total)> ListAsync(
             string? search,
             int skip,
             int take,
-            CancellationToken cancellationToken);
+            CancellationToken cancellationToken, string? status = null, string sort = "name",
+            decimal? minPrice = null, decimal? maxPrice = null);
 
         /// <summary>Gets product snapshots for internal batch checkout validation.</summary>
         /// <param name="productIds">Product identifiers.</param>

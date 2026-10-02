@@ -8,7 +8,12 @@ namespace Catalog.Application.Products.Queries.GetProducts;
 /// <param name="Search">Optional SKU, name, or description fragment.</param>
 /// <param name="Page">One-based page number.</param>
 /// <param name="PageSize">Requested bounded page size.</param>
-public sealed record GetProductsQuery(string? Search, int Page = 1, int PageSize = 20) : IRequest<ProductPageResponse>;
+/// <param name="Status">Optional publication state.</param>
+/// <param name="Sort">Name, price-asc, price-desc, or newest.</param>
+/// <param name="MinPrice">Optional minimum price.</param>
+/// <param name="MaxPrice">Optional maximum price.</param>
+public sealed record GetProductsQuery(string? Search, int Page = 1, int PageSize = 20,
+    string? Status = null, string Sort = "name", decimal? MinPrice = null, decimal? MaxPrice = null) : IRequest<ProductPageResponse>;
 
 /// <summary>Represents a paged Catalog response.</summary>
 /// <param name="Items">Matching products.</param>
@@ -36,9 +41,10 @@ public sealed class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, 
     /// <returns>The product page.</returns>
     public async Task<ProductPageResponse> Handle(GetProductsQuery request, CancellationToken cancellationToken)
     {
-        int page = Math.Max(1, request.Page);
+        int page = Math.Clamp(request.Page, 1, 100000);
         int pageSize = Math.Clamp(request.PageSize, 1, 100);
-        var (products, total) = await _repository.ListAsync(request.Search, (page - 1) * pageSize, pageSize, cancellationToken);
+        var (products, total) = await _repository.ListAsync(request.Search, (page - 1) * pageSize, pageSize, cancellationToken,
+            request.Status, request.Sort, request.MinPrice, request.MaxPrice);
         ProductResponse[] responses = products.Select(ProductMappings.ToResponse).ToArray();
         return new ProductPageResponse(responses, page, pageSize, total);
     }
