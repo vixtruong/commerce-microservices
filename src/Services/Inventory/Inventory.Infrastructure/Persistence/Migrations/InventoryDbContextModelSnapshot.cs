@@ -87,6 +87,36 @@ namespace Inventory.Infrastructure.Persistence.Migrations
                     b.ToTable("outbox_messages", "inventory");
                 });
 
+            modelBuilder.Entity("Inventory.Application.Stock.StockAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "CreatedAtUtc");
+
+                    b.ToTable("stock_adjustments", "inventory");
+                });
+
             modelBuilder.Entity("Inventory.Domain.Stock.StockItem", b =>
                 {
                     b.Property<Guid>("Id")

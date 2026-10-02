@@ -439,3 +439,27 @@ Generated or edited code must prioritize:
 5. Useful comments on important code.
 6. Avoiding over-engineering.
 7. Suitability for students or developers building a real-world project.
+
+---
+
+## React Frontend Rules
+
+- Frontend source belongs to the independent `vixtruong/commerce-web` repository, normally checked out at `../Commerce.Web`.
+- Backend owns public contracts, permissions and full-stack Compose integration. Do not vendor frontend source here.
+- Use `FRONTEND_SOURCE_PATH` for an alternate frontend checkout; integration CI checks out both repositories explicitly.
+
+- Keep TypeScript strict. Use explicit API DTOs and avoid `any` or unchecked casts.
+- Organize by feature with shared controls, API client, authentication and formatting modules.
+- Use TanStack Query for server state and mutations; keep Zustand limited to UI state.
+- Keep search, filtering, sorting and pagination in URL parameters.
+- Use React Hook Form and Zod for forms. Preserve dirty-form warnings and field-level accessible errors.
+- Route browser API calls through YARP only. Never call service ports, internal gRPC or RabbitMQ from React.
+- Centralize permissions and status labels. Use permission guards and `Can`; roles are bundles maintained by Identity.
+- Enforce permissions on the backend and ownership using the authenticated subject and resource authorization.
+- Preserve refresh single-flight, session generation checks, query cleanup and durable checkout idempotency keys.
+- Never automatically retry mutations. Represent asynchronous Saga progress and compensation using actual server states.
+- Preserve the restrained storefront and dense backoffice design; use existing tokens and responsive controls.
+- Provide keyboard navigation, visible focus, labels, dialog focus handling, loading/error/empty states and reduced motion.
+- Test business behavior with Vitest/Testing Library/MSW and real Gateway workflows with Playwright.
+- Run pnpm lint, typecheck, test and build after relevant changes. Review important layouts at 375, 768 and 1440px.
+- Keep Storybook, route/API documentation, Docker and CI aligned with implemented capabilities. Do not add fake buttons, records or metrics.

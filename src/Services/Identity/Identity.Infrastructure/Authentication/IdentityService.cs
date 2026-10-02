@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Commerce.BuildingBlocks.Application.Security;
 using Identity.Application.Authentication;
 using Identity.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -17,16 +18,19 @@ public sealed class IdentityService : IIdentityService
     private readonly UserManager<ApplicationUser> _users;
     private readonly IdentityDbContext _dbContext;
     private readonly IConfiguration _configuration;
+    private readonly IPermissionResolver _permissions;
 
     /// <summary>Initializes the Identity service.</summary>
     /// <param name="users">ASP.NET Core Identity user manager.</param>
     /// <param name="dbContext">Identity context.</param>
     /// <param name="configuration">JWT configuration and non-committed signing key.</param>
-    public IdentityService(UserManager<ApplicationUser> users, IdentityDbContext dbContext, IConfiguration configuration)
+    /// <param name="permissions">Authoritative effective-permission resolver.</param>
+    public IdentityService(UserManager<ApplicationUser> users, IdentityDbContext dbContext, IConfiguration configuration, IPermissionResolver permissions)
     {
         _users = users;
         _dbContext = dbContext;
         _configuration = configuration;
+        _permissions = permissions;
     }
 
     /// <inheritdoc />
@@ -66,22 +70,32 @@ public sealed class IdentityService : IIdentityService
     public async Task<AuthenticationResult<TokenResponse>> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
         string hash = Hash(refreshToken);
-        RefreshToken? stored = await _dbContext.RefreshTokens.SingleOrDefaultAsync(token => token.TokenHash == hash, cancellationToken);
-        if (stored is null || stored.RevokedAtUtc is not null || stored.ExpiresAtUtc <= DateTimeOffset.UtcNow)
+        return await _dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            return AuthenticationResult<TokenResponse>.Fail(AuthenticationFailure.InvalidRefreshToken);
-        }
+            // A retry starts with a clean unit of work rather than retaining a rolled-back replacement.
+            _dbContext.ChangeTracker.Clear();
+            RefreshToken? stored = await _dbContext.RefreshTokens.AsNoTracking()
+                .SingleOrDefaultAsync(token => token.TokenHash == hash, cancellationToken);
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            if (stored is null || stored.RevokedAtUtc is not null || stored.ExpiresAtUtc <= now)
+                return AuthenticationResult<TokenResponse>.Fail(AuthenticationFailure.InvalidRefreshToken);
+            ApplicationUser? user = await _users.FindByIdAsync(stored.UserId.ToString("D"));
+            if (user is null) return AuthenticationResult<TokenResponse>.Fail(AuthenticationFailure.InvalidRefreshToken);
 
-        ApplicationUser? user = await _users.FindByIdAsync(stored.UserId.ToString("D"));
-        if (user is null) return AuthenticationResult<TokenResponse>.Fail(AuthenticationFailure.InvalidRefreshToken);
-
-        // A single SaveChanges call is already transactional. Avoid a user-created transaction here because
-        // Npgsql's retrying execution strategy must own retries and the transaction used by SaveChanges.
-        TokenResponse replacement = await IssueAsync(user, cancellationToken, saveChanges: false);
-        stored.RevokedAtUtc = DateTimeOffset.UtcNow;
-        stored.ReplacedByTokenHash = Hash(replacement.RefreshToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return AuthenticationResult<TokenResponse>.Success(replacement);
+            // The conditional update admits one winner even when different browser tabs race the same token.
+            // Claim and replacement commit together, inside Npgsql's retrying execution strategy.
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            int claimed = await _dbContext.RefreshTokens
+                .Where(token => token.Id == stored.Id && token.RevokedAtUtc == null && token.ExpiresAtUtc > now)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedAtUtc, now), cancellationToken);
+            if (claimed != 1) return AuthenticationResult<TokenResponse>.Fail(AuthenticationFailure.InvalidRefreshToken);
+            TokenResponse replacement = await IssueAsync(user, cancellationToken, saveChanges: false);
+            await _dbContext.RefreshTokens.Where(token => token.Id == stored.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.ReplacedByTokenHash, Hash(replacement.RefreshToken)), cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return AuthenticationResult<TokenResponse>.Success(replacement);
+        });
     }
 
     /// <inheritdoc />
@@ -120,6 +134,8 @@ public sealed class IdentityService : IIdentityService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("D"))
         };
         claims.AddRange(roles.Select(role => new Claim("role", role)));
+        // Login and refresh both reload role permissions, so stale access claims are never copied forward.
+        claims.AddRange((await _permissions.ResolveAsync(user.Id, cancellationToken)).Select(p => new Claim(Permissions.ClaimType, p)));
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)), SecurityAlgorithms.HmacSha256);
         var jwt = new JwtSecurityToken(issuer, audience, claims, now.UtcDateTime, accessExpiry.UtcDateTime, credentials);

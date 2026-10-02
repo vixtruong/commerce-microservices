@@ -74,7 +74,7 @@ if ($order.status -notin @("Shipped", "Delivered")) {
 $payment = Invoke-RestMethod -Uri "$BaseUrl/api/payments/orders/$($checkout.orderId)" -Headers $adminHeaders
 if ($payment.status -ne "Succeeded") { throw "Payment state was $($payment.status)." }
 
-$shipment = Invoke-RestMethod -Uri "$BaseUrl/api/shipping/orders/$($checkout.orderId)" -Headers $customerHeaders
+$shipment = Invoke-RestMethod -Uri "$BaseUrl/api/shipping/orders/$($checkout.orderId)" -Headers $adminHeaders
 $inventory = Invoke-RestMethod -Uri "$BaseUrl/api/inventory/$($product.id)" -Headers $adminHeaders
 if ($inventory.reservedQuantity -ne 0) { throw "Inventory reservation was not confirmed." }
 

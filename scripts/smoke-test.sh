@@ -49,7 +49,7 @@ done
 payment_status=$(curl --fail --silent "$BASE_URL/api/payments/orders/$order_id" \
   -H "Authorization: Bearer $admin_token" | jq -r .status)
 [ "$payment_status" = Succeeded ] || { echo "Payment state: $payment_status" >&2; exit 1; }
-curl --fail --silent "$BASE_URL/api/shipping/orders/$order_id" -H "Authorization: Bearer $customer_token" >/dev/null
+curl --fail --silent "$BASE_URL/api/shipping/orders/$order_id" -H "Authorization: Bearer $admin_token" >/dev/null
 reserved=$(curl --fail --silent "$BASE_URL/api/inventory/$product_id" \
   -H "Authorization: Bearer $admin_token" | jq -r .reservedQuantity)
 [ "$reserved" = 0 ] || { echo "Inventory reservation remains: $reserved" >&2; exit 1; }

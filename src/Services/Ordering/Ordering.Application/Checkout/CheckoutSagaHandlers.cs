@@ -153,6 +153,7 @@ public sealed class CheckoutSagaHandler :
         (Order order, CheckoutSagaState saga) = await LoadAsync(integrationEvent.OrderId, cancellationToken);
         if (order.Status == OrderStatus.Paid)
         {
+            order.RecordShipment(integrationEvent.ShipmentId, integrationEvent.TrackingNumber);
             order.MarkShipped(DateTimeOffset.UtcNow);
             saga.MoveTo(CheckoutSagaStatus.ShipmentCreated, DateTimeOffset.UtcNow);
         }

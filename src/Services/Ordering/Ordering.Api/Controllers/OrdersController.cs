@@ -1,4 +1,7 @@
+using Commerce.BuildingBlocks.Application.Security;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using Commerce.BuildingBlocks.Application.Queries;
 using Commerce.BuildingBlocks.Domain.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -18,10 +21,56 @@ public sealed class OrdersController : ControllerBase
     public const string GetOrderRouteName = "Ordering.GetOrder";
 
     private readonly ISender _sender;
+    private readonly IOrderReadStore _reads;
+    private readonly IAuthorizationService _authorization;
 
     /// <summary>Initializes the Orders controller.</summary>
     /// <param name="sender">CQRS request sender.</param>
-    public OrdersController(ISender sender) => _sender = sender;
+    /// <param name="reads">Subject-scoped application read queries.</param>
+    /// <param name="authorization">Standard resource authorization service.</param>
+    public OrdersController(ISender sender, IOrderReadStore reads, IAuthorizationService authorization)
+    {
+        _sender = sender;
+        _reads = reads;
+        _authorization = authorization;
+    }
+
+    /// <summary>Gets only the authenticated customer's order history.</summary>
+    /// <param name="query">Bounded filters.</param>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <returns>Customer-owned order page.</returns>
+    [HttpGet]
+    public async Task<ActionResult<PagedResponse<OrderResponse>>> ListAsync([FromQuery] PageQuery query, CancellationToken cancellationToken) =>
+        Ok(await _reads.ListAsync(query, CustomerId(), cancellationToken));
+
+    /// <summary>Gets an administrative order page.</summary>
+    /// <param name="query">Bounded filters.</param>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <returns>Operational order page.</returns>
+    [HttpGet("admin")]
+    [Authorize(Policy = Permissions.OrderRead)]
+    public async Task<ActionResult<PagedResponse<OrderResponse>>> AdminListAsync([FromQuery] PageQuery query, CancellationToken cancellationToken) =>
+        Ok(await _reads.ListAsync(query, null, cancellationToken));
+
+    /// <summary>Gets an order in the authorized administrative scope.</summary>
+    /// <param name="orderId">Order identifier.</param>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <returns>Order snapshot or 404.</returns>
+    [HttpGet("admin/{orderId:guid}")]
+    [Authorize(Policy = Permissions.OrderRead)]
+    public async Task<ActionResult<OrderResponse>> AdminGetAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        OrderResponse? response = await _reads.GetAsync(orderId, null, cancellationToken);
+        return response is null ? NotFound() : Ok(response);
+    }
+
+    /// <summary>Gets server-computed operational summary counts.</summary>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <returns>Currency-separated paid order totals and counts.</returns>
+    [HttpGet("summary")]
+    [Authorize(Policy = Permissions.OrderRead)]
+    public async Task<ActionResult<OrderSummaryResponse>> SummaryAsync(CancellationToken cancellationToken) =>
+        Ok(await _reads.SummaryAsync(cancellationToken));
 
     /// <summary>
     /// Creates an order locally and returns immediately; Inventory, Payment, and Shipping continue asynchronously.
@@ -49,8 +98,12 @@ public sealed class OrdersController : ControllerBase
     [HttpGet("{orderId:guid}", Name = GetOrderRouteName)]
     public async Task<ActionResult<OrderResponse>> GetOrderAsync(Guid orderId, CancellationToken cancellationToken)
     {
-        Result<OrderResponse> result = await _sender.Send(new GetOrderQuery(orderId, CustomerId()), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : NotFound();
+        OrderResponse? response = await _reads.GetAsync(orderId, null, cancellationToken);
+        if (response is null) return NotFound();
+        // Authorize the persisted owner rather than trusting a client-supplied customer identifier.
+        AuthorizationResult authorized = await _authorization.AuthorizeAsync(User,
+            new OwnedResource(response.CustomerId), Permissions.OrderResourcePolicy);
+        return authorized.Succeeded ? Ok(response) : NotFound();
     }
 
     /// <summary>Reads the trusted customer identifier from the validated JWT subject claim.</summary>
@@ -76,8 +129,8 @@ public sealed class OrdersController : ControllerBase
 /// <param name="PostalCode">Postal code.</param>
 /// <param name="CountryCode">Two-letter country code.</param>
 public sealed record CheckoutRequest(
-    string RecipientName,
-    string AddressLine1,
-    string City,
-    string PostalCode,
-    string CountryCode);
+    [Required, StringLength(200)] string RecipientName,
+    [Required, StringLength(300)] string AddressLine1,
+    [Required, StringLength(100)] string City,
+    [Required, StringLength(30)] string PostalCode,
+    [Required, RegularExpression("^[A-Za-z]{2}$")] string CountryCode);

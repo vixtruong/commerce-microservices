@@ -1,5 +1,6 @@
 using Commerce.BuildingBlocks.Infrastructure.Persistence;
 using Inventory.Domain.Stock;
+using Inventory.Application.Stock;
 using Microsoft.EntityFrameworkCore;
 
 namespace Inventory.Infrastructure.Persistence;
@@ -15,6 +16,8 @@ public sealed class InventoryDbContext : DbContext
 
     /// <summary>Gets stock aggregates.</summary>
     public DbSet<StockItem> StockItems => Set<StockItem>();
+    /// <summary>Gets immutable stock-adjustment audit records.</summary>
+    public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
     /// <summary>Gets stock reservations.</summary>
     public DbSet<StockReservation> Reservations => Set<StockReservation>();
     /// <summary>Gets pending integration events.</summary>
@@ -27,6 +30,13 @@ public sealed class InventoryDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("inventory");
+        modelBuilder.Entity<StockAdjustment>(builder =>
+        {
+            builder.ToTable("stock_adjustments");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Reason).HasMaxLength(500);
+            builder.HasIndex(a => new { a.ProductId, a.CreatedAtUtc });
+        });
         modelBuilder.Entity<StockItem>(builder =>
         {
             builder.ToTable("stock_items");

@@ -25,6 +25,23 @@ x-api-deploy: &api-deploy
   networks: [commerce]
 
 services:
+  commerce-web:
+    <<: *api-deploy
+    build:
+      context: ${FRONTEND_SOURCE_PATH:-../Commerce.Web}
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8080"
+    depends_on:
+      commerce-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/health]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
   postgres:
     image: postgres:17-alpine
     environment:

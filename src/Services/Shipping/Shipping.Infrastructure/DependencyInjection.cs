@@ -23,6 +23,7 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Connection string 'ShippingDb' was not configured.");
         services.AddDbContext<ShippingDbContext>(options => options.UseNpgsql(database, npgsql => npgsql.EnableRetryOnFailure(3)));
         services.AddScoped<IShipmentRepository, ShipmentRepository>();
+        services.AddScoped<IShippingReadStore, ShippingReadStore>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork<ShippingDbContext>>();
         services.AddScoped<ShippingService>();
         services.AddCommerceMessaging(configuration);

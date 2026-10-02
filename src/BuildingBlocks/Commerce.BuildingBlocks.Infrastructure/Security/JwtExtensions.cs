@@ -1,4 +1,6 @@
 using System.Text;
+using Commerce.BuildingBlocks.Application.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,7 +45,11 @@ public static class JwtExtensions
                 RoleClaimType = "role"
             };
         });
-        services.AddAuthorization();
+        services.AddAuthorization(options => options.AddPolicy(Permissions.OrderResourcePolicy,
+            policy => policy.RequireAuthenticatedUser().AddRequirements(new OrderResourceRequirement())));
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+        services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationHandler, OrderResourceAuthorizationHandler>();
         return services;
     }
 }

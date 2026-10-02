@@ -12,6 +12,7 @@ builder.Services.AddCommerceJwt(builder.Configuration);
 builder.Services.AddCors(options => options.AddPolicy("commerce-clients", policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
     .AllowAnyHeader()
+    .WithExposedHeaders("X-Correlation-Id", "X-Request-Id", "X-Service-Instance", "traceparent")
     .AllowAnyMethod()));
 builder.Services.AddRateLimiter(options =>
 {

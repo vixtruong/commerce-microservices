@@ -35,6 +35,7 @@ public static class DependencyInjection
 
         services.AddDbContext<OrderingDbContext>(options => options.UseNpgsql(database, npgsql => npgsql.EnableRetryOnFailure(3)));
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<Ordering.Application.Orders.IOrderReadStore, OrderReadStore>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork<OrderingDbContext>>();
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redis));
         services.AddSingleton<IIdempotencyStore, RedisIdempotencyStore>();
