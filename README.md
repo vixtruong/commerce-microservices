@@ -1,12 +1,13 @@
 # Commerce microservices reference
 
-Commerce is a runnable .NET 10 reference system for Clean Architecture, domain-driven design, CQRS, service-owned data, internal gRPC, RabbitMQ workflows, Outbox/Inbox reliability, Redis, YARP, JWT security, resilience, and OpenTelemetry. It is designed for learning: the distributed consistency boundaries are explicit and the normal local workflow runs entirely in Docker.
+Commerce is a runnable .NET 10 reference system with a React storefront and permission-aware administration portal. It demonstrates Clean Architecture, domain-driven design, CQRS, service-owned data, internal gRPC, RabbitMQ workflows, Outbox/Inbox reliability, Redis, YARP, JWT security, resilience, and OpenTelemetry. The distributed consistency boundaries are explicit and the normal local workflow runs entirely in Docker.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Client[REST client] -->|HTTP + JWT| Gateway[YARP Gateway]
+    Client[React storefront / backoffice] --> Web[nginx]
+    Web -->|HTTP + JWT| Gateway[YARP Gateway]
     Gateway -->|REST| Catalog1[Catalog API 1]
     Gateway -->|RoundRobin REST| Catalog2[Catalog API 2]
     Gateway -->|REST| Identity[Identity API]
@@ -125,6 +126,14 @@ Inventory scans expired pending leases in bounded batches. The stock mutation an
 
 Prerequisites are Docker Desktop/Engine with Compose. No local PostgreSQL, Redis, RabbitMQ, or .NET runtime is required for the normal full-stack flow.
 
+The frontend lives in the separate public [commerce-web repository](https://github.com/vixtruong/commerce-web). Clone it next to this backend checkout before starting Compose:
+
+```bash
+git clone https://github.com/vixtruong/commerce-web.git ../Commerce.Web
+```
+
+Compose builds from `../Commerce.Web` by default. Set `FRONTEND_SOURCE_PATH` to another frontend checkout if needed. The backend integration branch for the complete Storefront/backoffice APIs is `codex/full-stack-commerce` until merged.
+
 ```bash
 cp .env.example .env
 docker compose up --build
@@ -157,6 +166,7 @@ These are deliberately local credentials. Change all `.env` values outside an is
 | Component | URL or address |
 | --- | --- |
 | Gateway | <http://localhost:8080> |
+| Storefront and administration | <http://localhost:8088> |
 | PostgreSQL | `127.0.0.1:${POSTGRES_PORT:-5432}` |
 | Redis | `127.0.0.1:${REDIS_PORT:-6379}` |
 | RabbitMQ Management | <http://localhost:15672> |
@@ -202,12 +212,15 @@ curl -X POST http://localhost:8080/api/orders/checkout \
 curl http://localhost:8080/api/orders/ORDER_ID -H "Authorization: Bearer $TOKEN"
 ```
 
-To demonstrate payment compensation, set `PAYMENT_OUTCOME=Failure` in `.env`, reset the stack, start it, and run:
+To demonstrate payment compensation while preserving local data, recreate only Payment with the failure outcome:
 
 ```powershell
-docker compose down -v
-docker compose up --build -d
+$env:PAYMENT_OUTCOME = 'Failure'
+docker compose up -d --no-deps --wait --wait-timeout 90 payment-api
 ./scripts/smoke-test-payment-failure.ps1
+$env:PAYMENT_OUTCOME = 'Success'
+docker compose up -d --no-deps --wait --wait-timeout 90 payment-api
+Remove-Item Env:PAYMENT_OUTCOME
 ```
 
 The script verifies `Payment=Failed`, `Order=Cancelled`, the reservation is released, and physical stock is unchanged.
@@ -296,3 +309,55 @@ curl -i http://localhost:8080/api/catalog/products
 ## Architectural decisions
 
 Concise rationale for the major choices lives under [`docs/adr`](docs/adr): YARP at the edge, internal-only gRPC, RabbitMQ integration events, database-per-service, Outbox/Inbox, Ordering Saga orchestration, Redis responsibilities, and PostgreSQL.
+
+## React storefront and administration
+
+Open [the storefront](http://localhost:8088) after Compose is healthy. Sign in with the development accounts above. The administrator can open `/admin`; customers receive a 403 page there. React uses real YARP APIs for catalog, live availability, cart, asynchronous checkout, order history and account data. The backoffice includes operational summaries, product editing/publication, audited stock adjustments, reservation history, orders, payments, shipments, users, editable staff permission bundles, access audit and Gateway readiness.
+
+The frontend uses React 19, strict TypeScript, Vite, React Router, TanStack Query/Table, React Hook Form, Zod, Zustand for UI state, Tailwind CSS, Radix Dialog, Lucide and Recharts. See [frontend architecture and routes](docs/frontend-architecture.md), [authorization rules and endpoint matrix](docs/authorization.md), and [API audit](docs/frontend-api-audit.md).
+
+Frontend code, package tooling, Storybook and quality CI belong to [commerce-web](https://github.com/vixtruong/commerce-web). This repository owns backend contracts and the full-stack Compose/browser integration workflow. Neither repository vendors the other's source.
+
+For frontend development, keep Compose running and start Vite:
+
+```bash
+cd ../Commerce.Web
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Vite serves `http://localhost:5173` and proxies `/api` to YARP at port 8080. Node 22 and pnpm 10.17.1 are configured. `VITE_API_BASE_URL` is optional: leave it empty for the same-origin Vite/nginx proxy, or set it to the Gateway URL in a local frontend `.env`. Compose uses nginx on port 8088 and requires no runtime frontend credentials. Never put secrets in `VITE_*` variables because they are bundled for the browser. Playwright accepts `WEB_BASE_URL`, `API_BASE_URL` (the Gateway), and reads development credentials from the root `.env`.
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm build-storybook
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
+
+`pnpm storybook` opens component examples at port 6006. Playwright writes responsive screenshots to the frontend's `artifacts/frontend-visual` and browser diagnostics under `playwright-report` / `test-results`. Set `E2E_ENV_FILE=../Commerce/.env`, supply environment variables, or configure the frontend's ignored `.env.e2e` using `.env.e2e.example`. The frontend workflow checks lint/types/tests/build/Storybook; this backend workflow checks .NET and checks out `commerce-web` for Compose browser flows. Browser fixtures use isolated customer accounts; administrative test products are deactivated afterward and retained for audit.
+
+Authorization uses role bundles resolved by Identity, permission policies on each service and owner checks on customer resources. Existing `Admin`/`Customer` roles remain; CatalogManager, WarehouseManager, OrderManager and SupportAgent presets are added. Access JWTs expire after 15 minutes (with 30 seconds of validation clock tolerance); refresh reloads current permissions and rotates with one concurrent winner. User membership edits revoke refresh sessions. Already-issued access claims remain valid until expiry. There are no direct user permission overrides.
+
+Checkout saves a stable owner-scoped key and address before submission, reuses it after a network failure/remount and resumes the accepted order. The processing page polls only while needed, waits for shipment creation and finishes compensation before saying stock was released. Payment is the existing fake development provider; no real card charge is performed. Product illustrations are explicit local samples. Unsupported refunds, order cancellation, image upload, category assignment, password changes, profile editing and carrier integration have no misleading controls.
+
+Three new service-owned migrations add the Ordering shipment snapshot, Inventory adjustment audit and Identity access audit. Development Compose applies them automatically; production must apply them in a controlled release step. gRPC and integration event contracts, routing keys, queues and Saga ownership remain unchanged. The Gateway still contains no domain logic.
+
+To verify failure without deleting local data, recreate only Payment:
+
+```powershell
+$env:PAYMENT_OUTCOME = 'Failure'
+docker compose up -d --no-deps --wait --wait-timeout 90 payment-api
+./scripts/smoke-test-payment-failure.ps1
+$env:E2E_ENV_FILE = '../Commerce/.env'
+pnpm --dir ../Commerce.Web test:e2e --grep 'customer checkout'
+$env:PAYMENT_OUTCOME = 'Success'
+docker compose up -d --no-deps --wait --wait-timeout 90 payment-api
+Remove-Item Env:PAYMENT_OUTCOME
+Remove-Item Env:E2E_ENV_FILE
+```
+
+The [Postman collection](docs/postman/commerce-microservices-api.postman_collection.json) is importable and contains Gateway-only requests with blank credentials. Remote Postman synchronization requires an available Postman MCP connector. See the [implementation and validation report](docs/implementation-validation.md) for the delivered scope, commands, verified results and deliberate boundaries.
