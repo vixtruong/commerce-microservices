@@ -107,6 +107,37 @@ public sealed class InventoryService
     /// <returns>REST response.</returns>
     private static StockItemResponse Map(StockItem item) =>
         new(item.ProductId, item.QuantityOnHand, item.ReservedQuantity, item.AvailableQuantity, item.Version);
+
+    /// <summary>Applies an audited adjustment using the caller's observed concurrency version.</summary>
+    /// <param name="productId">Product identifier.</param>
+    /// <param name="delta">Signed unit change.</param>
+    /// <param name="reason">Required business reason.</param>
+    /// <param name="version">Observed aggregate version.</param>
+    /// <param name="actorId">Authorized administrator subject.</param>
+    /// <param name="audit">Audit writer participating in the Inventory transaction.</param>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <returns>Updated state or safe validation/conflict error.</returns>
+    public async Task<Result<StockItemResponse>> AdjustAsync(Guid productId, int delta, string reason, long version,
+        Guid actorId, IInventoryReadStore audit, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length is < 3 or > 500 || productId == Guid.Empty)
+            return Error.Validation("Inventory.ReasonRequired", "A valid product and a reason of 3–500 characters are required.");
+        StockItem? item = await _repository.GetByProductIdAsync(productId, true, cancellationToken);
+        if (item is null)
+        {
+            item = StockItem.Create(productId, DateTimeOffset.UtcNow);
+            _repository.Add(item);
+        }
+        if (item.Version != version) return Error.Conflict("Inventory.Concurrency", "Stock changed. Refresh before adjusting.");
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Result result = item.AdjustStock(delta, now);
+        if (result.IsFailure) return result.Error;
+        audit.AddAdjustment(new StockAdjustment { Id = Guid.NewGuid(), ProductId = productId, ActorId = actorId,
+            Delta = delta, Reason = reason.Trim(), CreatedAtUtc = now });
+        // The unit change and its audit record commit together, preserving a reviewable operation history.
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Map(item);
+    }
 }
 
 /// <summary>Handles idempotent reservation requests from the Ordering Saga.</summary>
