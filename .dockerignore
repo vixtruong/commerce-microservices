@@ -10,3 +10,11 @@ coverage
 *.suo
 .env
 appsettings.Local.json
+**/node_modules
+**/dist
+**/storybook-static
+**/test-results
+**/playwright-report
+artifacts
+.pnpm-store
+frontend

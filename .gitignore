@@ -49,4 +49,13 @@ docker-compose.override.yml
 *.nupkg
 *.snupkg
 packages/
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+dist/
+storybook-static/
+playwright-report/
+test-results/
 !**/packages/build/
+# The public frontend repository is checked out here only by integration CI.
+/frontend/
