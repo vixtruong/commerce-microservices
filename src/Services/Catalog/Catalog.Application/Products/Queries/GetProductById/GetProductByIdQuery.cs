@@ -22,6 +22,11 @@ namespace Catalog.Application.Products.Queries.GetProductById
     /// <param name="Status">Product status.</param>
     /// <param name="CreatedAtUtc">UTC creation time.</param>
     /// <param name="UpdatedAtUtc">UTC update time.</param>
+    /// <param name="Brand">Optional manufacturer.</param>
+    /// <param name="ImageUrl">Optional same-origin Catalog image path.</param>
+    /// <param name="SourceUrl">Optional manufacturer reference.</param>
+    /// <param name="CategorySlug">Optional assigned category slug.</param>
+    /// <param name="ImageUrls">Ordered gallery, including the primary photo when present.</param>
     public sealed record ProductResponse(
         Guid Id,
         string Sku,
@@ -31,5 +36,9 @@ namespace Catalog.Application.Products.Queries.GetProductById
         string PriceCurrency,
         string Status,
         DateTimeOffset CreatedAtUtc,
-        DateTimeOffset UpdatedAtUtc);
+        DateTimeOffset UpdatedAtUtc,
+        string? Brand = null,
+        string? ImageUrl = null,
+        string? SourceUrl = null,
+        string? CategorySlug = null, IReadOnlyCollection<string>? ImageUrls = null);
 }

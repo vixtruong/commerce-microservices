@@ -40,13 +40,14 @@ namespace Catalog.Application.Abstractions
         /// <param name="sort">Allowed sorting choice.</param>
         /// <param name="minPrice">Optional lower price bound.</param>
         /// <param name="maxPrice">Optional upper price bound.</param>
+        /// <param name="category">Optional exact category slug.</param>
         /// <returns>The matching product page and total count.</returns>
         Task<(IReadOnlyCollection<Product> Products, int Total)> ListAsync(
             string? search,
             int skip,
             int take,
             CancellationToken cancellationToken, string? status = null, string sort = "name",
-            decimal? minPrice = null, decimal? maxPrice = null);
+            decimal? minPrice = null, decimal? maxPrice = null, string? category = null);
 
         /// <summary>Gets product snapshots for internal batch checkout validation.</summary>
         /// <param name="productIds">Product identifiers.</param>
@@ -68,6 +69,10 @@ namespace Catalog.Application.Abstractions
             string sku,
             CancellationToken cancellationToken);
 
+        /// <summary>Checks whether a product identity already exists.</summary>
+        /// <param name="productId">Product identifier.</param>
+        /// <param name="cancellationToken">Database cancellation.</param>
+        /// <returns>Whether the product exists.</returns>
         Task<bool> ExistsByIdAsync(
             ProductId productId,
             CancellationToken cancellationToken);

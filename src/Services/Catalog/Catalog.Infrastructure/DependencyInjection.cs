@@ -1,4 +1,5 @@
 using Catalog.Application.Abstractions;
+using Catalog.Application.Categories;
 using Catalog.Infrastructure.Caching;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Persistence.Repositories;
@@ -64,6 +65,8 @@ public static class DependencyInjection
             IProductRepository,
             ProductRepository>();
         services.AddSingleton<IProductCache, RedisProductCache>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICategoryService, CategoryService>();
         services.AddPostgresReadiness<CatalogDbContext>();
         services.AddRedisReadiness();
 

@@ -1,5 +1,6 @@
 using Commerce.BuildingBlocks.Domain.Entities;
 using Commerce.BuildingBlocks.Domain.Results;
+using System.Text.RegularExpressions;
 
 namespace Catalog.Domain.Categories;
 
@@ -22,10 +23,16 @@ public static class CategoryErrors
 /// <summary>Groups products under a stable normalized slug owned by Catalog.</summary>
 public sealed class Category : AggregateRoot<CategoryId>
 {
+    /// <summary>Initializes an empty category for persistence.</summary>
     private Category()
     {
     }
 
+    /// <summary>Initializes a validated category.</summary>
+    /// <param name="id">Stable identity.</param>
+    /// <param name="name">Display name.</param>
+    /// <param name="slug">Normalized slug.</param>
+    /// <param name="createdAtUtc">UTC creation time.</param>
     private Category(CategoryId id, string name, string slug, DateTimeOffset createdAtUtc) : base(id)
     {
         Name = name;
@@ -58,7 +65,8 @@ public sealed class Category : AggregateRoot<CategoryId>
         DateTimeOffset createdAtUtc,
         CategoryId? categoryId = null)
     {
-        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(slug))
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(slug) || name.Trim().Length > 120 ||
+            slug.Trim().Length > 120 || !Regex.IsMatch(slug.Trim().ToLowerInvariant(), @"^[a-z0-9]+(?:-[a-z0-9]+)*$"))
         {
             return CategoryErrors.NameRequired;
         }
@@ -71,4 +79,16 @@ public sealed class Category : AggregateRoot<CategoryId>
 
     /// <summary>Deactivates the category without deleting historical assignments.</summary>
     public void Deactivate() => IsActive = false;
+
+    /// <summary>Changes a group's display name and availability while preserving links and historical assignments.</summary>
+    /// <param name="name">Validated display name.</param>
+    /// <param name="isActive">Whether administrators may make new assignments.</param>
+    /// <returns>Success or a validation error.</returns>
+    public Result Update(string name, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120) return CategoryErrors.NameRequired;
+        Name = name.Trim();
+        IsActive = isActive;
+        return Result.Success();
+    }
 }

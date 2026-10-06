@@ -12,8 +12,10 @@ namespace Catalog.Application.Products.Queries.GetProducts;
 /// <param name="Sort">Name, price-asc, price-desc, or newest.</param>
 /// <param name="MinPrice">Optional minimum price.</param>
 /// <param name="MaxPrice">Optional maximum price.</param>
+/// <param name="Category">Optional exact category slug.</param>
 public sealed record GetProductsQuery(string? Search, int Page = 1, int PageSize = 20,
-    string? Status = null, string Sort = "name", decimal? MinPrice = null, decimal? MaxPrice = null) : IRequest<ProductPageResponse>;
+    string? Status = null, string Sort = "name", decimal? MinPrice = null, decimal? MaxPrice = null,
+    string? Category = null) : IRequest<ProductPageResponse>;
 
 /// <summary>Represents a paged Catalog response.</summary>
 /// <param name="Items">Matching products.</param>
@@ -44,7 +46,7 @@ public sealed class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, 
         int page = Math.Clamp(request.Page, 1, 100000);
         int pageSize = Math.Clamp(request.PageSize, 1, 100);
         var (products, total) = await _repository.ListAsync(request.Search, (page - 1) * pageSize, pageSize, cancellationToken,
-            request.Status, request.Sort, request.MinPrice, request.MaxPrice);
+            request.Status, request.Sort, request.MinPrice, request.MaxPrice, request.Category);
         ProductResponse[] responses = products.Select(ProductMappings.ToResponse).ToArray();
         return new ProductPageResponse(responses, page, pageSize, total);
     }
@@ -65,5 +67,6 @@ public static class ProductMappings
         product.Price.Currency,
         product.Status.ToString(),
         product.CreatedAtUtc,
-        product.UpdatedAtUtc);
+        product.UpdatedAtUtc, product.Brand, product.ImageUrl, product.SourceUrl, product.CategorySlug,
+        product.ImageUrls.Count > 0 ? product.ImageUrls : product.ImageUrl is null ? [] : [product.ImageUrl]);
 }
