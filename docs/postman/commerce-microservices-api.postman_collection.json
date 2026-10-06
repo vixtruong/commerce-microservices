@@ -69,6 +69,21 @@
       "key": "idempotencyKey",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "categorySlug",
+      "value": "keyboards",
+      "type": "string"
+    },
+    {
+      "key": "newCategorySlug",
+      "value": "reference-collection",
+      "type": "string"
+    },
+    {
+      "key": "imageUrl",
+      "value": "/api/catalog/media/demo-keychron-8370155585625.jpg",
+      "type": "string"
     }
   ],
   "auth": {
@@ -434,9 +449,9 @@
           "name": "Browse products",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/api/catalog/products?status=Active&page=1&pageSize=20&sort=name",
+            "url": "{{baseUrl}}/api/catalog/products?status=Active&page=1&pageSize=20&sort=name&category={{categorySlug}}",
             "header": [],
-            "description": "Authorization: public. All traffic passes through YARP.",
+            "description": "Public through YARP. Filter by an exact collection slug; clear categorySlug for all products. Responses add nullable brand, imageUrl, sourceUrl and categorySlug.",
             "auth": {
               "type": "noauth"
             }
@@ -470,7 +485,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                  "pm.test('Product exists', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200 && pm.response.json().imageUrl) pm.collectionVariables.set('imageUrl', pm.response.json().imageUrl);"
                 ]
               }
             }
@@ -487,10 +503,10 @@
                 "value": "application/json"
               }
             ],
-            "description": "Authorization: catalog.products.create. All traffic passes through YARP.",
+            "description": "Requires catalog.products.create. All traffic uses YARP. Category must exist and be active for a new assignment. imageUrls holds up to eight ordered Catalog paths, first is primary; omitted/null preserves, [] clears the gallery. imageUrl remains backward compatible. sourceUrl accepts HTTPS. This sample replaces the gallery with imageUrl captured after an upload or product detail.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"name\": \"Reference product\",\n  \"description\": \"Development product created through YARP.\",\n  \"priceAmount\": 49.95,\n  \"priceCurrency\": \"USD\"\n}",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"name\": \"Reference product\",\n  \"description\": \"Development product created through YARP.\",\n  \"priceAmount\": 49.95,\n  \"priceCurrency\": \"USD\",\n  \"brand\": \"Reference brand\",\n  \"categorySlug\": \"{{categorySlug}}\",\n  \"imageUrls\": [\n    \"{{imageUrl}}\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -522,10 +538,10 @@
                 "value": "application/json"
               }
             ],
-            "description": "Authorization: catalog.products.update. All traffic passes through YARP.",
+            "description": "Requires catalog.products.update. All traffic uses YARP. Category must exist and be active for a new assignment. imageUrls holds up to eight ordered Catalog paths, first is primary; omitted/null preserves, [] clears the gallery. imageUrl remains backward compatible. sourceUrl accepts HTTPS. This sample replaces the gallery with imageUrl captured after an upload or product detail.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Reference product updated\",\n  \"description\": \"Updated through the public Gateway.\",\n  \"priceAmount\": 49.95,\n  \"priceCurrency\": \"USD\"\n}",
+              "raw": "{\n  \"name\": \"Reference product updated\",\n  \"description\": \"Updated through the public Gateway.\",\n  \"priceAmount\": 49.95,\n  \"priceCurrency\": \"USD\",\n  \"brand\": \"Reference brand\",\n  \"categorySlug\": \"{{categorySlug}}\",\n  \"imageUrls\": [\n    \"{{imageUrl}}\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -580,6 +596,170 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public collections",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalog/categories",
+            "header": [],
+            "description": "Public through YARP.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Administrative collections",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalog/categories?includeInactive=true",
+            "header": [],
+            "description": "Requires catalog.products.update through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create collection",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/catalog/categories",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Requires catalog.products.create through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reference collection\",\n  \"slug\": \"{{newCategorySlug}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rename or disable collection",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/catalog/categories/{{categorySlug}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Requires catalog.products.update through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Keyboards\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product photograph",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}{{imageUrl}}",
+            "header": [],
+            "description": "Public through YARP.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload product photograph",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/catalog/images",
+            "description": "Requires catalog.products.create OR catalog.products.update. Select a real JPEG, PNG or WebP file (max 5 MB). The browser/Postman supplies the multipart boundary. Returns an immutable shared-volume path; assign it through imageUrls when saving the product.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Photo uploaded', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('imageUrl', pm.response.json().imageUrl);"
                 ]
               }
             }
