@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddDbContext<InventoryDbContext>(options => options.UseNpgsql(connectionString, npgsql =>
             npgsql.EnableRetryOnFailure(3)));
         services.AddScoped<IInventoryRepository, InventoryRepository>();
+        services.AddScoped<IInventoryReadStore, InventoryReadStore>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork<InventoryDbContext>>();
         services.AddScoped<InventoryService>();
         services.AddScoped<ReservationExpirationService>();

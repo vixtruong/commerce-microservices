@@ -35,6 +35,9 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<IdentityDbContext>()
         .AddDefaultTokenProviders();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IUserAdministration, UserAdministration>();
+        services.AddScoped<IPermissionResolver, PermissionResolver>();
+        services.AddScoped<IAccessManagement, AccessManagement>();
         services.AddPostgresReadiness<IdentityDbContext>();
         return services;
     }

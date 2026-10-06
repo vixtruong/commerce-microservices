@@ -1,0 +1,69 @@
+name: validate commerce
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore Commerce.slnx
+      - run: dotnet build Commerce.slnx --no-restore
+      - run: dotnet test Commerce.slnx --no-build --no-restore -m:1
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      WEB_BASE_URL: http://localhost:8088
+      API_BASE_URL: http://localhost:8080
+      E2E_ENV_FILE: ../.env
+      FRONTEND_SOURCE_PATH: ./frontend
+      COMPOSE_PARALLEL_LIMIT: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: vixtruong/commerce-web
+          ref: main
+          path: frontend
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+      - run: docker compose up --build -d --wait --wait-timeout 300
+      - run: sh scripts/smoke-test.sh
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: frontend
+      - run: pnpm test:e2e
+        working-directory: frontend
+      - name: verify payment compensation
+        run: |
+          PAYMENT_OUTCOME=Failure docker compose up -d --no-deps --wait --wait-timeout 90 payment-api
+          PAYMENT_OUTCOME=Failure pnpm --dir frontend test:e2e --grep 'customer checkout'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-verification
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            frontend/artifacts/frontend-visual
+      - run: docker compose logs --tail 100
+        if: failure()
+      - run: docker compose down
+        if: always()

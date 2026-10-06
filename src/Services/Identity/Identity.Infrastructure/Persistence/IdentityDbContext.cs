@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Identity.Application.Authentication;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,6 +40,8 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
 
     /// <summary>Gets hashed refresh tokens.</summary>
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    /// <summary>Gets safe access-control audit records.</summary>
+    public DbSet<AccessChange> AccessChanges => Set<AccessChange>();
 
     /// <summary>Configures the Identity schema and refresh token indexes.</summary>
     /// <param name="builder">Model builder.</param>
@@ -46,6 +49,15 @@ public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, Ident
     {
         builder.HasDefaultSchema("identity");
         base.OnModelCreating(builder);
+        builder.Entity<AccessChange>(audit =>
+        {
+            audit.ToTable("access_changes");
+            audit.HasKey(a => a.Id);
+            audit.Property(a => a.Action).HasMaxLength(100);
+            audit.Property(a => a.Before).HasMaxLength(4000);
+            audit.Property(a => a.After).HasMaxLength(4000);
+            audit.HasIndex(a => a.CreatedAtUtc);
+        });
         builder.Entity<RefreshToken>(token =>
         {
             token.ToTable("refresh_tokens");

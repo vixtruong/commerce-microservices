@@ -1,3 +1,4 @@
+using Commerce.BuildingBlocks.Application.Security;
 using Commerce.BuildingBlocks.Domain.Results;
 using Inventory.Application.Stock;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +22,7 @@ public sealed class InventoryController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>Stock state or 404.</returns>
     [HttpGet("{productId:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.InventoryRead)]
     public async Task<ActionResult<StockItemResponse>> GetAsync(Guid productId, CancellationToken cancellationToken)
     {
         StockItemResponse? response = await _inventory.GetAsync(productId, cancellationToken);
@@ -34,7 +35,7 @@ public sealed class InventoryController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>Updated stock state or Problem Details.</returns>
     [HttpPost("{productId:guid}/receipts")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.InventoryAdjust)]
     public async Task<ActionResult<StockItemResponse>> IncreaseAsync(
         Guid productId,
         IncreaseStockRequest request,

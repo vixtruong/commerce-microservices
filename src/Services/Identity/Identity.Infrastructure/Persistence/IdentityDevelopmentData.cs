@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
+using Commerce.BuildingBlocks.Application.Security;
 
 namespace Identity.Infrastructure.Persistence;
 
@@ -20,11 +22,20 @@ public static class IdentityDevelopmentData
         string customerPassword,
         string adminPassword)
     {
-        foreach (string roleName in new[] { "Customer", "Admin" })
+        foreach (string roleName in new[] { "Customer", "Admin", "CatalogManager", "WarehouseManager", "OrderManager", "SupportAgent" })
         {
             if (!await roles.RoleExistsAsync(roleName))
             {
                 EnsureSucceeded(await roles.CreateAsync(new IdentityRole<Guid>(roleName)), $"create role {roleName}");
+            }
+            IdentityRole<Guid> role = (await roles.FindByNameAsync(roleName))!;
+            IList<Claim> claims = await roles.GetClaimsAsync(role);
+            // Seed a bundle once; restarting Development must not overwrite a deliberate permission edit.
+            if (!claims.Any(c => c.Type == "commerce.permission-seeded"))
+            {
+                foreach (string permission in DefaultPermissions(roleName))
+                    EnsureSucceeded(await roles.AddClaimAsync(role, new Claim(Permissions.ClaimType, permission)), "seed permission");
+                EnsureSucceeded(await roles.AddClaimAsync(role, new Claim("commerce.permission-seeded", "true")), "mark bundle seeded");
             }
         }
 
@@ -35,6 +46,19 @@ public static class IdentityDevelopmentData
             users, Guid.Parse("44444444-4444-4444-4444-444444444444"),
             "admin@commerce.local", adminPassword, "Admin");
     }
+
+    /// <summary>Defines development role presets for implemented use cases.</summary>
+    /// <param name="role">Established role name.</param>
+    /// <returns>Default permission bundle.</returns>
+    private static IReadOnlyCollection<string> DefaultPermissions(string role) => role switch
+    {
+        "Admin" => Permissions.All,
+        "CatalogManager" => [Permissions.BackofficeAccess, Permissions.ProductRead, Permissions.ProductCreate, Permissions.ProductUpdate, Permissions.ProductDeactivate],
+        "WarehouseManager" => [Permissions.BackofficeAccess, Permissions.ProductRead, Permissions.InventoryRead, Permissions.InventoryAdjust, Permissions.ReservationRead, Permissions.OrderRead],
+        "OrderManager" => [Permissions.BackofficeAccess, Permissions.OrderRead, Permissions.PaymentRead, Permissions.ShipmentRead, Permissions.ShipmentUpdate],
+        "SupportAgent" => [Permissions.BackofficeAccess, Permissions.OrderRead, Permissions.PaymentRead, Permissions.ShipmentRead, Permissions.UserRead],
+        _ => [Permissions.ProductRead]
+    };
 
     /// <summary>Creates one stable development user and assigns its role.</summary>
     /// <param name="users">Identity user manager.</param>

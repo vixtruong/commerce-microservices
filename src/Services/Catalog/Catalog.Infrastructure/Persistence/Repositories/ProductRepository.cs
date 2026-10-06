@@ -55,7 +55,8 @@ namespace Catalog.Infrastructure.Persistence.Repositories
             string? search,
             int skip,
             int take,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, string? status = null, string sort = "name",
+            decimal? minPrice = null, decimal? maxPrice = null)
         {
             IQueryable<Product> query = _dbContext.Products.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(search))
@@ -68,8 +69,19 @@ namespace Catalog.Infrastructure.Persistence.Repositories
                     EF.Functions.ILike(product.Description, $"%{term}%"));
             }
 
+            if (status is not null && Enum.TryParse(status, out ProductStatus publication)) query = query.Where(p => p.Status == publication);
+            if (minPrice.HasValue) query = query.Where(p => p.Price.Amount >= minPrice.Value);
+            if (maxPrice.HasValue) query = query.Where(p => p.Price.Amount <= maxPrice.Value);
             int total = await query.CountAsync(cancellationToken);
-            Product[] products = await query.OrderBy(product => product.Name).Skip(skip).Take(take).ToArrayAsync(cancellationToken);
+            IOrderedQueryable<Product> ordered = sort switch
+            {
+                "price-asc" => query.OrderBy(p => p.Price.Amount),
+                "price-desc" => query.OrderByDescending(p => p.Price.Amount),
+                "newest" => query.OrderByDescending(p => p.CreatedAtUtc),
+                _ => query.OrderBy(p => p.Name)
+            };
+            // Stable ties prevent duplicates or gaps when moving between adjacent pages.
+            Product[] products = await ordered.ThenBy(p => p.Id).Skip(skip).Take(take).ToArrayAsync(cancellationToken);
             return (products, total);
         }
 

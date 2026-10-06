@@ -1,0 +1,1238 @@
+{
+  "info": {
+    "name": "Commerce Microservices API",
+    "description": "Gateway-only requests based on repository controllers. Credentials/tokens are blank. Import for isolated development; see docs/authorization.md. No gRPC or RabbitMQ HTTP wrappers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "roleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shipmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sku",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) { const tokens = pm.response.json(); pm.collectionVariables.set('accessToken', tokens.accessToken); pm.collectionVariables.set('refreshToken', tokens.refreshToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) { const tokens = pm.response.json(); pm.collectionVariables.set('accessToken', tokens.accessToken); pm.collectionVariables.set('refreshToken', tokens.refreshToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) { const tokens = pm.response.json(); pm.collectionVariables.set('accessToken', tokens.accessToken); pm.collectionVariables.set('refreshToken', tokens.refreshToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "header": [],
+            "description": "Authorization: authenticated subject. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('userId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/users?page=1&pageSize=20",
+            "header": [],
+            "description": "Authorization: users.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User access",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/users/{{userId}}",
+            "header": [],
+            "description": "Authorization: users.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Assign user roles",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/auth/users/{{userId}}/roles",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: users.roles.manage; self changes rejected. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roles\": [\n    \"WarehouseManager\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Permission catalog",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/permissions",
+            "header": [],
+            "description": "Authorization: users.roles.manage. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Role bundles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/roles",
+            "header": [],
+            "description": "Authorization: users.roles.manage. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replace staff role bundle",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/auth/roles/{{roleId}}/permissions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: users.roles.manage; protected and actor bundles rejected. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    \"backoffice.access\",\n    \"inventory.read\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Access change audit",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/access/audit",
+            "header": [],
+            "description": "Authorization: users.roles.manage. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "Browse products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalog/products?status=Active&page=1&pageSize=20&sort=name",
+            "header": [],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalog/products/{{productId}}",
+            "header": [],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create draft product",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/catalog/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: catalog.products.create. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"name\": \"Reference product\",\n  \"description\": \"Development product created through YARP.\",\n  \"priceAmount\": 49.95,\n  \"priceCurrency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('productId', pm.response.json().productId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/catalog/products/{{productId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: catalog.products.update. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reference product updated\",\n  \"description\": \"Updated through the public Gateway.\",\n  \"priceAmount\": 49.95,\n  \"priceCurrency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate product",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/catalog/products/{{productId}}/activate",
+            "header": [],
+            "description": "Authorization: catalog.products.update. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate product",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/catalog/products/{{productId}}/deactivate",
+            "header": [],
+            "description": "Authorization: catalog.products.deactivate. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart and checkout",
+      "item": [
+        {
+          "name": "My cart",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cart",
+            "header": [],
+            "description": "Authorization: authenticated subject. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set item quantity",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/cart/items/{{productId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: authenticated subject. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/cart/items/{{productId}}",
+            "header": [],
+            "description": "Authorization: authenticated subject. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear my cart",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/cart",
+            "header": [],
+            "description": "Authorization: authenticated subject. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept checkout or replay",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/orders/checkout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "description": "Authorization: authenticated subject; persistent Idempotency-Key. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientName\": \"Commerce Customer\",\n  \"addressLine1\": \"1 Reference Architecture Way\",\n  \"city\": \"Hanoi\",\n  \"postalCode\": \"100000\",\n  \"countryCode\": \"VN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "pm.test('Checkout accepted', () => pm.expect(pm.response.code).to.eql(202));",
+                  "if (pm.response.code === 202) pm.collectionVariables.set('orderId', pm.response.json().orderId);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('idempotencyKey')) pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders?page=1&pageSize=20",
+            "header": [],
+            "description": "Authorization: authenticated subject. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owned order",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/{{orderId}}",
+            "header": [],
+            "description": "Authorization: owner OR orders.read; unrelated users receive 404. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Order operations",
+      "item": [
+        {
+          "name": "All orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/admin?page=1&pageSize=20",
+            "header": [],
+            "description": "Authorization: orders.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Operational order",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/admin/{{orderId}}",
+            "header": [],
+            "description": "Authorization: orders.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Order summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/summary",
+            "header": [],
+            "description": "Authorization: orders.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Public availability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/{{productId}}/availability",
+            "header": [],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory overview",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory?page=1&pageSize=20",
+            "header": [],
+            "description": "Authorization: inventory.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/{{productId}}",
+            "header": [],
+            "description": "Authorization: inventory.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/summary",
+            "header": [],
+            "description": "Authorization: inventory.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/{{productId}}/reservations",
+            "header": [],
+            "description": "Authorization: inventory.reservations.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Receive stock",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/inventory/{{productId}}/receipts",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: inventory.adjust. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adjust stock",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/inventory/{{productId}}/adjustments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authorization: inventory.adjust; use the version returned by Stock details. All traffic passes through YARP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": 1,\n  \"reason\": \"Development receipt verification\",\n  \"version\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment operations",
+      "item": [
+        {
+          "name": "Payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments?page=1&pageSize=20",
+            "header": [],
+            "description": "Authorization: payments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/{{paymentId}}",
+            "header": [],
+            "description": "Authorization: payments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Order payment",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/orders/{{orderId}}",
+            "header": [],
+            "description": "Authorization: payments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/summary",
+            "header": [],
+            "description": "Authorization: payments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shipping operations",
+      "item": [
+        {
+          "name": "Shipments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipping?page=1&pageSize=20",
+            "header": [],
+            "description": "Authorization: shipments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Shipment details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipping/{{shipmentId}}",
+            "header": [],
+            "description": "Authorization: shipments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Order shipment",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipping/orders/{{orderId}}",
+            "header": [],
+            "description": "Authorization: shipments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Advance shipment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shipping/{{shipmentId}}/advance",
+            "header": [],
+            "description": "Authorization: shipments.read AND shipments.update. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Shipment summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shipping/summary",
+            "header": [],
+            "description": "Authorization: shipments.read. All traffic passes through YARP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Gateway readiness",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health/ready",
+            "header": [],
+            "description": "Authorization: public. All traffic passes through YARP.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

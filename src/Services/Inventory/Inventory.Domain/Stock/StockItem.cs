@@ -34,6 +34,21 @@ public sealed class StockItem : AggregateRoot<StockItemId>
     /// <summary>Gets units that can still be reserved.</summary>
     public int AvailableQuantity => QuantityOnHand - ReservedQuantity;
 
+    /// <summary>Adjusts physical units without removing units held by checkout reservations.</summary>
+    /// <param name="delta">Signed nonzero unit change.</param>
+    /// <param name="changedAtUtc">UTC change time.</param>
+    /// <returns>Success or a stock-invariant error.</returns>
+    public Result AdjustStock(int delta, DateTimeOffset changedAtUtc)
+    {
+        long target = (long)QuantityOnHand + delta;
+        // Leased units belong to in-flight checkout; an administrator cannot erase those holds.
+        if (delta == 0 || target < ReservedQuantity || target > int.MaxValue)
+            return Error.Conflict("Inventory.InvalidAdjustment", "Adjustment must preserve reserved units and fit the stock range.");
+        QuantityOnHand = (int)target;
+        Touch(changedAtUtc);
+        return Result.Success();
+    }
+
     /// <summary>
     /// Gets the optimistic concurrency token incremented by every aggregate mutation.
     /// </summary>

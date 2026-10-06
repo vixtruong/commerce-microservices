@@ -1,3 +1,5 @@
+using Commerce.BuildingBlocks.Application.Security;
+using System.ComponentModel.DataAnnotations;
 using Catalog.Application.Products.Commands.CreateProduct;
 using Catalog.Application.Products.Commands.UpdateProduct;
 using Catalog.Application.Products.Queries.GetProductById;
@@ -27,6 +29,10 @@ public sealed class ProductsController : ControllerBase
     /// <param name="search">Optional search term.</param>
     /// <param name="page">One-based page number.</param>
     /// <param name="pageSize">Page size from 1 through 100.</param>
+    /// <param name="status">Optional publication filter.</param>
+    /// <param name="sort">Allowed server sorting choice.</param>
+    /// <param name="minPrice">Optional lower price.</param>
+    /// <param name="maxPrice">Optional upper price.</param>
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>A product page.</returns>
     [HttpGet]
@@ -35,8 +41,12 @@ public sealed class ProductsController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        [FromQuery] string sort = "name",
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
         CancellationToken cancellationToken = default) =>
-        Ok(await _sender.Send(new GetProductsQuery(search, page, pageSize), cancellationToken));
+        Ok(await _sender.Send(new GetProductsQuery(search, page, pageSize, status, sort, minPrice, maxPrice), cancellationToken));
 
     /// <summary>Gets one product through the Redis cache-aside query.</summary>
     /// <param name="productId">Product identifier.</param>
@@ -55,7 +65,7 @@ public sealed class ProductsController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>A 201 response or Problem Details.</returns>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.ProductCreate)]
     public async Task<IActionResult> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken)
     {
         Result<CreateProductResponse> result = await _sender.Send(new CreateProductCommand(
@@ -72,7 +82,7 @@ public sealed class ProductsController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>204 or Problem Details.</returns>
     [HttpPut("{productId:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.ProductUpdate)]
     public async Task<IActionResult> UpdateProductAsync(Guid productId, UpdateProductRequest request, CancellationToken cancellationToken)
     {
         Result result = await _sender.Send(new UpdateProductCommand(
@@ -85,7 +95,7 @@ public sealed class ProductsController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>204 or Problem Details.</returns>
     [HttpPost("{productId:guid}/activate")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.ProductUpdate)]
     public Task<IActionResult> ActivateAsync(Guid productId, CancellationToken cancellationToken) =>
         SetActivationAsync(productId, true, cancellationToken);
 
@@ -94,7 +104,7 @@ public sealed class ProductsController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>204 or Problem Details.</returns>
     [HttpPost("{productId:guid}/deactivate")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.ProductDeactivate)]
     public Task<IActionResult> DeactivateAsync(Guid productId, CancellationToken cancellationToken) =>
         SetActivationAsync(productId, false, cancellationToken);
 
@@ -130,11 +140,20 @@ public sealed class ProductsController : ControllerBase
 /// <param name="Description">Optional description.</param>
 /// <param name="PriceAmount">Non-negative price.</param>
 /// <param name="PriceCurrency">Three-letter currency.</param>
-public sealed record CreateProductRequest(string Sku, string Name, string? Description, decimal PriceAmount, string PriceCurrency);
+public sealed record CreateProductRequest(
+    [Required, StringLength(64)] string Sku,
+    [Required, StringLength(200)] string Name,
+    [StringLength(2000)] string? Description,
+    [Range(typeof(decimal), "0", "999999999999.99")] decimal PriceAmount,
+    [Required, RegularExpression("^[A-Za-z]{3}$")] string PriceCurrency);
 
 /// <summary>Defines mutable product values.</summary>
 /// <param name="Name">Display name.</param>
 /// <param name="Description">Description.</param>
 /// <param name="PriceAmount">Non-negative price.</param>
 /// <param name="PriceCurrency">Three-letter currency.</param>
-public sealed record UpdateProductRequest(string Name, string? Description, decimal PriceAmount, string PriceCurrency);
+public sealed record UpdateProductRequest(
+    [Required, StringLength(200)] string Name,
+    [StringLength(2000)] string? Description,
+    [Range(typeof(decimal), "0", "999999999999.99")] decimal PriceAmount,
+    [Required, RegularExpression("^[A-Za-z]{3}$")] string PriceCurrency);

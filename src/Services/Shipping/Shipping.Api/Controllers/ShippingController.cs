@@ -1,3 +1,4 @@
+using Commerce.BuildingBlocks.Application.Security;
 using Commerce.BuildingBlocks.Domain.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ namespace Shipping.Api.Controllers;
 
 /// <summary>Queries shipment state and advances fake fulfilment in development.</summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = Permissions.ShipmentRead)]
 [Route("api/shipping")]
 public sealed class ShippingController : ControllerBase
 {
@@ -45,7 +46,7 @@ public sealed class ShippingController : ControllerBase
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>The updated shipment or Problem Details.</returns>
     [HttpPost("{shipmentId:guid}/advance")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.ShipmentUpdate)]
     public async Task<IActionResult> AdvanceAsync(Guid shipmentId, CancellationToken cancellationToken)
     {
         Result<Shipment> result = await _shipping.AdvanceAsync(shipmentId, cancellationToken);

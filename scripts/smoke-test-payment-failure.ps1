@@ -21,7 +21,7 @@ $before = Invoke-RestMethod -Uri "$BaseUrl/api/inventory/$productId" -Headers $a
 Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/cart/items/$productId" -Headers $customerHeaders `
     -ContentType "application/json" -Body '{"quantity":1}' | Out-Null
 $headers = $customerHeaders.Clone()
-$headers["Idempotency-Key"] = "commerce-payment-failure-v1"
+$headers["Idempotency-Key"] = "commerce-payment-failure-$([Guid]::NewGuid())"
 $body = '{"recipientName":"Commerce Customer","addressLine1":"1 Compensation Way","city":"Hanoi","postalCode":"100000","countryCode":"VN"}'
 $checkout = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/orders/checkout" -Headers $headers `
     -ContentType "application/json" -Body $body
@@ -29,7 +29,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$BaseUrl/api/orders/checkout" -
 $order = $null
 for ($attempt = 1; $attempt -le 60; $attempt++) {
     $order = Invoke-RestMethod -Uri "$BaseUrl/api/orders/$($checkout.orderId)" -Headers $customerHeaders
-    if ($order.status -eq "Cancelled") { break }
+    if ($order.status -eq "Cancelled" -and $order.sagaStatus -ne "Compensating") { break }
     Start-Sleep -Seconds 2
 }
 if ($order.status -ne "Cancelled") { throw "Expected Cancelled but received $($order.status). Is PAYMENT_OUTCOME=Failure?" }
