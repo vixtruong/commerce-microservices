@@ -150,6 +150,8 @@ Compose creates seven logical databases through `deploy/postgres/init-databases.
 
 ### Development seed
 
+For the 200-product technology/accessory customer demonstration, see [demo setup and collections](docs/demo-data-guide.md). The importer adds vendor-sourced models/photos, Catalog groups, synthetic customers/staff and real local checkout workflows through YARP, preserving existing data and using resumable checkpoints.
+
 Seed values are stable and are enabled only in the Docker Development environment:
 
 | Data | Value |
@@ -342,7 +344,7 @@ pnpm test:e2e
 
 Authorization uses role bundles resolved by Identity, permission policies on each service and owner checks on customer resources. Existing `Admin`/`Customer` roles remain; CatalogManager, WarehouseManager, OrderManager and SupportAgent presets are added. Access JWTs expire after 15 minutes (with 30 seconds of validation clock tolerance); refresh reloads current permissions and rotates with one concurrent winner. User membership edits revoke refresh sessions. Already-issued access claims remain valid until expiry. There are no direct user permission overrides.
 
-Checkout saves a stable owner-scoped key and address before submission, reuses it after a network failure/remount and resumes the accepted order. The processing page polls only while needed, waits for shipment creation and finishes compensation before saying stock was released. Payment is the existing fake development provider; no real card charge is performed. Product illustrations are explicit local samples. Unsupported refunds, order cancellation, image upload, category assignment, password changes, profile editing and carrier integration have no misleading controls.
+Checkout saves a stable owner-scoped key and address before submission, reuses it after a network failure/remount and resumes the accepted order. The processing page polls only while needed, waits for shipment creation and finishes compensation before saying stock was released. Payment is the existing fake development provider; no real card charge is performed. Product photos, ordered galleries, multipart uploads and collection assignment are supported; legacy seed illustrations remain labeled samples. Unsupported refunds, administrative order cancellation, password changes, profile editing and carrier integration have no misleading controls. See [the demo data guide](docs/demo-data-guide.md) for the 200 technology models, accounts, orders and local setup.
 
 Three new service-owned migrations add the Ordering shipment snapshot, Inventory adjustment audit and Identity access audit. Development Compose applies them automatically; production must apply them in a controlled release step. gRPC and integration event contracts, routing keys, queues and Saga ownership remain unchanged. The Gateway still contains no domain logic.
 

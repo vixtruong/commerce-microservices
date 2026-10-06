@@ -37,6 +37,7 @@ secrets.json
 *.log
 logs/
 data/
+App_Data/
 
 # OS files
 .DS_Store

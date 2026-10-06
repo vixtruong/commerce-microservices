@@ -40,5 +40,5 @@ public sealed class RedisProductCache : IProductCache
     /// <summary>Builds the versioned Catalog cache key.</summary>
     /// <param name="productId">Product identifier.</param>
     /// <returns>A namespaced cache key.</returns>
-    private static string Key(Guid productId) => $"catalog:product:v1:{productId:D}";
+    private static string Key(Guid productId) => $"catalog:product:v3:{productId:D}";
 }

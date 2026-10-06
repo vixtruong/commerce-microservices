@@ -1,5 +1,6 @@
 ﻿using Catalog.Application.Abstractions;
 using Catalog.Domain.Products;
+using Catalog.Application.Categories;
 using Commerce.BuildingBlocks.Application.Persistence;
 using Commerce.BuildingBlocks.Domain.Results;
 using MediatR;
@@ -13,13 +14,19 @@ namespace Catalog.Application.Products.Commands.CreateProduct
     {
         private readonly IProductRepository _productRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICategoryRepository _categories;
 
+        /// <summary>Initializes creation with Catalog-owned category validation.</summary>
+        /// <param name="productRepository">Product repository.</param>
+        /// <param name="unitOfWork">Catalog transaction boundary.</param>
+        /// <param name="categories">Category repository.</param>
         public CreateProductCommandHandler(
             IProductRepository productRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork, ICategoryRepository categories)
         {
             _productRepository = productRepository;
             _unitOfWork = unitOfWork;
+            _categories = categories;
         }
 
         /// <summary>
@@ -56,6 +63,13 @@ namespace Catalog.Application.Products.Commands.CreateProduct
             }
 
             Product product = productResult.Value;
+
+            Result presentation = product.ChangePresentation(request.Brand, request.ImageUrl, request.SourceUrl,
+                request.CategorySlug, DateTimeOffset.UtcNow, request.ImageUrls);
+            if (presentation.IsFailure) return presentation.Error;
+            if (product.CategorySlug is not null &&
+                (await _categories.GetBySlugAsync(product.CategorySlug, cancellationToken))?.IsActive != true)
+                return Error.Validation("Catalog.CategoryUnavailable", "Choose an existing active product group.");
 
             _productRepository.Add(product);
 

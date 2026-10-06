@@ -56,7 +56,7 @@ namespace Catalog.Infrastructure.Persistence.Repositories
             int skip,
             int take,
             CancellationToken cancellationToken, string? status = null, string sort = "name",
-            decimal? minPrice = null, decimal? maxPrice = null)
+            decimal? minPrice = null, decimal? maxPrice = null, string? category = null)
         {
             IQueryable<Product> query = _dbContext.Products.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(search))
@@ -72,6 +72,11 @@ namespace Catalog.Infrastructure.Persistence.Repositories
             if (status is not null && Enum.TryParse(status, out ProductStatus publication)) query = query.Where(p => p.Status == publication);
             if (minPrice.HasValue) query = query.Where(p => p.Price.Amount >= minPrice.Value);
             if (maxPrice.HasValue) query = query.Where(p => p.Price.Amount <= maxPrice.Value);
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                string slug = category.Trim().ToLowerInvariant();
+                query = query.Where(product => product.CategorySlug == slug);
+            }
             int total = await query.CountAsync(cancellationToken);
             IOrderedQueryable<Product> ordered = sort switch
             {

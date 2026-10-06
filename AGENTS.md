@@ -444,22 +444,58 @@ Generated or edited code must prioritize:
 
 ## React Frontend Rules
 
-- Frontend source belongs to the independent `vixtruong/commerce-web` repository, normally checked out at `../Commerce.Web`.
-- Backend owns public contracts, permissions and full-stack Compose integration. Do not vendor frontend source here.
-- Use `FRONTEND_SOURCE_PATH` for an alternate frontend checkout; integration CI checks out both repositories explicitly.
+### Ownership and architecture
 
-- Keep TypeScript strict. Use explicit API DTOs and avoid `any` or unchecked casts.
-- Organize by feature with shared controls, API client, authentication and formatting modules.
-- Use TanStack Query for server state and mutations; keep Zustand limited to UI state.
-- Keep search, filtering, sorting and pagination in URL parameters.
-- Use React Hook Form and Zod for forms. Preserve dirty-form warnings and field-level accessible errors.
-- Route browser API calls through YARP only. Never call service ports, internal gRPC or RabbitMQ from React.
-- Centralize permissions and status labels. Use permission guards and `Can`; roles are bundles maintained by Identity.
-- Enforce permissions on the backend and ownership using the authenticated subject and resource authorization.
-- Preserve refresh single-flight, session generation checks, query cleanup and durable checkout idempotency keys.
-- Never automatically retry mutations. Represent asynchronous Saga progress and compensation using actual server states.
-- Preserve the restrained storefront and dense backoffice design; use existing tokens and responsive controls.
-- Provide keyboard navigation, visible focus, labels, dialog focus handling, loading/error/empty states and reduced motion.
-- Test business behavior with Vitest/Testing Library/MSW and real Gateway workflows with Playwright.
-- Run pnpm lint, typecheck, test and build after relevant changes. Review important layouts at 375, 768 and 1440px.
-- Keep Storybook, route/API documentation, Docker and CI aligned with implemented capabilities. Do not add fake buttons, records or metrics.
+- Frontend source belongs to the independent `vixtruong/commerce-web` repository, normally checked out at `../Commerce.Web`. `src/Web` is not a place to vendor React source.
+- Backend owns public contracts, permissions and full-stack Compose integration. Use `FRONTEND_SOURCE_PATH` for an alternate frontend checkout; integration CI checks out both repositories explicitly.
+- Keep TypeScript strict, use explicit API DTOs and avoid `any` or unchecked casts. Do not expose backend domain/EF entities as frontend contracts.
+- Organize by feature with shared controls, layouts, API client, authentication and formatting modules. Use existing dependencies before adding packages.
+- Browser requests go through YARP only. Never call service ports, internal gRPC, RabbitMQ or databases from React.
+
+### Design system and UI structure
+
+- **SkillNest is the primary visual reference**: calm mint canvas, white sidebar/header, mint product stages, dark emerald accents, restrained icon tiles and monospace metadata. Logbook supplements content hierarchy and spacing. DuelSheet is excluded.
+- Design structure around the user task. Storefront uses a compact search header, actual merchandise early, a full-width catalog toolbar/grid and a focused purchase panel. Backoffice uses a KPI strip, action queues and dense operational tables/forms. Do not preserve an old layout solely to restyle it.
+- Keep corners restrained: controls 4px, surfaces 6px, dialogs at most 8px. Only avatars and status dots are circular. Prefer whitespace and separators to nested cards and decorative pills.
+- Use semantic tokens in the frontend's `src/styles/tokens.css`. `index.css` imports `base.css`, `storefront.css`, `commerce.css`, `admin.css` and `responsive.css`; keep breakpoints together and avoid competing overrides.
+- Use proportional display typography for strong headings, monospace for SKU/eyebrow/workspace metadata and body typography for long text/forms. System fonts must work offline and with the current CSP.
+- Reuse `Brand`, `PageHeader`, feedback, status, table, pagination and checkout navigation components. Use existing Lucide icons; every interactive control must have a supported action.
+- Do not invent discounts, reviews, records, metrics or stock/health indicators. Data-dependent copy must come from authoritative responses.
+- Render Catalog-owned same-origin photos and ordered galleries; identify legacy seed illustrations as sample artwork and show explicit fallback when a photo fails or is unavailable. Product editors upload up to eight JPEG/PNG/WebP photos through the authorized Catalog API.
+- Inspect backend use cases before adding refunds, password changes, editable profiles, carrier tracking or category assignment.
+
+### State, forms and navigation
+
+- Use TanStack Query for server state, profile, cart and summaries; keep Zustand limited to UI preferences/navigation.
+- Keep search/filter/sort/pagination in URL parameters. Reset related filters together and reset the page when filters change; preserve debounce and placeholder-response pagination guards.
+- Use React Hook Form and Zod. Preserve dirty-form warnings, autocomplete, field-level accessible errors and server validation mapping.
+- Centralize formatting and status labels. Calculate totals using integer cents and group by currency; send original backend status values even when labels are human-readable.
+- Never automatically retry mutations. Preserve duplicate-submit guards and existing confirmation dialogs.
+
+### Security and workflow invariants
+
+- Centralize permissions in `src/auth/permissions.ts`; use permission guards and `Can`. Roles are Identity-managed bundles. Backend policies and resource ownership remain authoritative.
+- Preserve refresh single-flight, tab-scoped credentials, session-generation checks, private-query cancellation/cleanup and safe same-origin return paths.
+- Derive command palette and sidebar results from effective permissions; never expose a forbidden area through search.
+- Password visibility must not submit forms, alter entered values or log credentials. Never commit tokens, secrets, local environment content or sensitive test artifacts.
+- Preserve owner-scoped durable checkout idempotency keys and immutable payloads saved before submission; network failures, remounts and session renewal must reuse the attempt.
+- Preserve serialized optimistic cart writes and rollback. Cart clearing after accepted checkout remains explicit.
+- `CheckoutSteps` shows page location only; asynchronous Saga progress and compensation must follow persisted backend states. Do not invent transition timestamps or label shipment creation as delivery.
+- Stop polling at terminal state, error, unmount or timeout and retain manual resume. Report released stock only after compensation completes.
+
+### Accessibility and responsive quality
+
+- Provide keyboard navigation, visible focus, skip links, route focus, labels, heading hierarchy, appropriate button types and active route/step state.
+- Use Radix dialogs/drawers with title, description, focus handling and Escape support; use native disclosure for catalog filters.
+- Target at least 44px for primary controls. Preserve readable contrast (4.5:1 for text), status text in addition to color, and reduced motion.
+- Provide meaningful loading/error/empty states with actionable retry when supported. Avoid unexplained blank panels.
+- Preserve table captions/headers and visible mobile field labels. Table containers may scroll locally; the document must not overflow horizontally.
+- Review important layouts at 375, 768 and 1440px with real and long content, including auth, product, cart/checkout, dashboard, tables and forms.
+
+### Verification and documentation
+
+- Test behavior with Vitest/Testing Library/MSW and real Gateway workflows with Playwright. Preserve refresh, idempotency, permission, ownership and compensation coverage.
+- Run `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build`; run `pnpm build-storybook` when shared UI/stories change. Report actual outcomes and unverified service limitations.
+- E2E credentials come from ignored frontend `.env.e2e` or explicit `E2E_ENV_FILE`; never commit them.
+- Keep Storybook, README, route/API documentation, Docker and CI aligned with implemented capabilities. Public REST/DTO/Gateway/auth or end-to-end business workflow changes require the Postman synchronization procedure above.
+- Research, implementation plan and verification record live in `../Commerce.Web/docs/frontend-redesign-plan.md`. The frontend's own AGENTS contains its detailed working rules.

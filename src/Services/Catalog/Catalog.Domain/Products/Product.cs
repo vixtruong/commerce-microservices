@@ -1,5 +1,6 @@
 ﻿using Catalog.Domain.Common;
 using Catalog.Domain.Products.Events;
+using System.Text.RegularExpressions;
 using Commerce.BuildingBlocks.Domain.Entities;
 using Commerce.BuildingBlocks.Domain.Results;
 
@@ -10,6 +11,13 @@ namespace Catalog.Domain.Products
     /// </summary>
     public class Product : AggregateRoot<ProductId>
     {
+        /// <summary>Initializes a validated product with its stable identity and starting price.</summary>
+        /// <param name="id">Product identity.</param>
+        /// <param name="sku">Normalized SKU.</param>
+        /// <param name="name">Display name.</param>
+        /// <param name="description">Product description.</param>
+        /// <param name="price">Validated price.</param>
+        /// <param name="createdAtUtc">Creation time.</param>
         private Product(
             ProductId id,
             string sku,
@@ -38,6 +46,60 @@ namespace Catalog.Domain.Products
 
         /// <summary>Gets the customer-facing product description.</summary>
         public string Description { get; private set; } = string.Empty;
+
+        /// <summary>Gets the manufacturer or accessory brand when known.</summary>
+        public string? Brand { get; private set; }
+
+        /// <summary>Gets the same-origin Catalog image path when an image is available.</summary>
+        public string? ImageUrl { get; private set; }
+
+        /// <summary>Gets up to eight ordered Catalog photo paths; the first is the primary image.</summary>
+        public IReadOnlyList<string> ImageUrls { get; private set; } = Array.Empty<string>();
+
+        /// <summary>Gets the public manufacturer page used to verify imported product details.</summary>
+        public string? SourceUrl { get; private set; }
+
+        /// <summary>Gets the stable category slug assigned by Catalog administration.</summary>
+        public string? CategorySlug { get; private set; }
+
+        /// <summary>Updates validated merchandising details without changing SKU, price or publication.</summary>
+        /// <param name="brand">Optional manufacturer name.</param>
+        /// <param name="imageUrl">Optional local Catalog media path.</param>
+        /// <param name="sourceUrl">Optional HTTPS manufacturer reference.</param>
+        /// <param name="categorySlug">Optional existing category slug.</param>
+        /// <param name="changedAtUtc">UTC change time.</param>
+        /// <param name="imageUrls">Optional complete ordered gallery; empty clears and null preserves legacy primary behavior.</param>
+        /// <returns>Success or a safe validation failure.</returns>
+        public Result ChangePresentation(string? brand, string? imageUrl, string? sourceUrl,
+            string? categorySlug, DateTimeOffset changedAtUtc, IReadOnlyCollection<string>? imageUrls = null)
+        {
+            brand = string.IsNullOrWhiteSpace(brand) ? null : brand.Trim();
+            imageUrl = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim();
+            sourceUrl = string.IsNullOrWhiteSpace(sourceUrl) ? null : sourceUrl.Trim();
+            categorySlug = string.IsNullOrWhiteSpace(categorySlug) ? null : categorySlug.Trim().ToLowerInvariant();
+            string[] gallery = imageUrls is not null ? imageUrls.Select(path => path?.Trim() ?? string.Empty).ToArray() :
+                imageUrl is null ? [] : imageUrl == ImageUrl && ImageUrls.Count > 0 ? ImageUrls.ToArray() : [imageUrl];
+            if (gallery.Length > 8 || gallery.Distinct(StringComparer.Ordinal).Count() != gallery.Length ||
+                gallery.Any(path => !Regex.IsMatch(path, @"^/api/catalog/media/[a-z0-9][a-z0-9._-]{0,120}\.(jpg|jpeg|png|webp|avif)$")))
+                return Error.Validation("Catalog.InvalidGallery", "Choose up to eight distinct Catalog image paths.");
+            if (imageUrls is not null) imageUrl = gallery.FirstOrDefault();
+            // Restrict browser media to Catalog assets; arbitrary remote URLs cannot bypass the frontend CSP.
+            if (brand?.Length > 80 || (imageUrl is not null && !Regex.IsMatch(imageUrl,
+                @"^/api/catalog/media/[a-z0-9][a-z0-9._-]{0,120}\.(jpg|jpeg|png|webp|avif)$")) ||
+                (sourceUrl is not null && (sourceUrl.Length > 1000 || !Uri.TryCreate(sourceUrl, UriKind.Absolute, out Uri? source) ||
+                    source.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(source.UserInfo))) ||
+                (categorySlug is not null && (categorySlug.Length > 120 || !Regex.IsMatch(categorySlug, @"^[a-z0-9]+(?:-[a-z0-9]+)*$"))))
+            {
+                return Error.Validation("Catalog.InvalidPresentation", "Choose a valid brand, Catalog image path, HTTPS source and category slug.");
+            }
+            Brand = brand;
+            ImageUrl = imageUrl;
+            ImageUrls = gallery;
+            SourceUrl = sourceUrl;
+            CategorySlug = categorySlug;
+            UpdatedAtUtc = changedAtUtc;
+            return Result.Success();
+        }
 
         /// <summary>Gets the current authoritative Catalog price.</summary>
         public Money Price { get; private set; } = null!;

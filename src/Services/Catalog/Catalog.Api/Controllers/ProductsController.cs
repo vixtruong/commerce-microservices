@@ -33,6 +33,7 @@ public sealed class ProductsController : ControllerBase
     /// <param name="sort">Allowed server sorting choice.</param>
     /// <param name="minPrice">Optional lower price.</param>
     /// <param name="maxPrice">Optional upper price.</param>
+    /// <param name="category">Optional exact category slug.</param>
     /// <param name="cancellationToken">Request-abort token.</param>
     /// <returns>A product page.</returns>
     [HttpGet]
@@ -45,8 +46,9 @@ public sealed class ProductsController : ControllerBase
         [FromQuery] string sort = "name",
         [FromQuery] decimal? minPrice = null,
         [FromQuery] decimal? maxPrice = null,
+        [FromQuery] string? category = null,
         CancellationToken cancellationToken = default) =>
-        Ok(await _sender.Send(new GetProductsQuery(search, page, pageSize, status, sort, minPrice, maxPrice), cancellationToken));
+        Ok(await _sender.Send(new GetProductsQuery(search, page, pageSize, status, sort, minPrice, maxPrice, category), cancellationToken));
 
     /// <summary>Gets one product through the Redis cache-aside query.</summary>
     /// <param name="productId">Product identifier.</param>
@@ -69,7 +71,8 @@ public sealed class ProductsController : ControllerBase
     public async Task<IActionResult> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken)
     {
         Result<CreateProductResponse> result = await _sender.Send(new CreateProductCommand(
-            request.Sku, request.Name, request.Description, request.PriceAmount, request.PriceCurrency), cancellationToken);
+            request.Sku, request.Name, request.Description, request.PriceAmount, request.PriceCurrency,
+            request.Brand, request.ImageUrl, request.SourceUrl, request.CategorySlug, request.ImageUrls), cancellationToken);
         return result.IsSuccess
             // A named route is independent of MVC's default removal of the Async action-name suffix.
             ? CreatedAtRoute(GetProductRouteName, new { productId = result.Value.ProductId }, result.Value)
@@ -86,7 +89,8 @@ public sealed class ProductsController : ControllerBase
     public async Task<IActionResult> UpdateProductAsync(Guid productId, UpdateProductRequest request, CancellationToken cancellationToken)
     {
         Result result = await _sender.Send(new UpdateProductCommand(
-            productId, request.Name, request.Description, request.PriceAmount, request.PriceCurrency), cancellationToken);
+            productId, request.Name, request.Description, request.PriceAmount, request.PriceCurrency,
+            request.Brand, request.ImageUrl, request.SourceUrl, request.CategorySlug, request.ImageUrls), cancellationToken);
         return result.IsSuccess ? NoContent() : ProblemFor(result.Error);
     }
 
@@ -140,20 +144,38 @@ public sealed class ProductsController : ControllerBase
 /// <param name="Description">Optional description.</param>
 /// <param name="PriceAmount">Non-negative price.</param>
 /// <param name="PriceCurrency">Three-letter currency.</param>
+/// <param name="Brand">Optional manufacturer name.</param>
+/// <param name="ImageUrl">Optional Catalog-owned photo path.</param>
+/// <param name="SourceUrl">Optional HTTPS manufacturer reference.</param>
+/// <param name="CategorySlug">Optional active group slug.</param>
+/// <param name="ImageUrls">Optional ordered gallery, at most eight photos.</param>
 public sealed record CreateProductRequest(
     [Required, StringLength(64)] string Sku,
     [Required, StringLength(200)] string Name,
     [StringLength(2000)] string? Description,
     [Range(typeof(decimal), "0", "999999999999.99")] decimal PriceAmount,
-    [Required, RegularExpression("^[A-Za-z]{3}$")] string PriceCurrency);
+    [Required, RegularExpression("^[A-Za-z]{3}$")] string PriceCurrency,
+    [StringLength(80)] string? Brand = null,
+    [StringLength(180)] string? ImageUrl = null,
+    [StringLength(1000)] string? SourceUrl = null,
+    [StringLength(120)] string? CategorySlug = null, [MaxLength(8)] IReadOnlyCollection<string>? ImageUrls = null);
 
 /// <summary>Defines mutable product values.</summary>
 /// <param name="Name">Display name.</param>
 /// <param name="Description">Description.</param>
 /// <param name="PriceAmount">Non-negative price.</param>
 /// <param name="PriceCurrency">Three-letter currency.</param>
+/// <param name="Brand">Manufacturer; null preserves and empty clears.</param>
+/// <param name="ImageUrl">Photo path; null preserves and empty clears.</param>
+/// <param name="SourceUrl">Manufacturer reference; null preserves and empty clears.</param>
+/// <param name="CategorySlug">Group; null preserves and empty clears.</param>
+/// <param name="ImageUrls">Ordered gallery; null preserves and empty clears.</param>
 public sealed record UpdateProductRequest(
     [Required, StringLength(200)] string Name,
     [StringLength(2000)] string? Description,
     [Range(typeof(decimal), "0", "999999999999.99")] decimal PriceAmount,
-    [Required, RegularExpression("^[A-Za-z]{3}$")] string PriceCurrency);
+    [Required, RegularExpression("^[A-Za-z]{3}$")] string PriceCurrency,
+    [StringLength(80)] string? Brand = null,
+    [StringLength(180)] string? ImageUrl = null,
+    [StringLength(1000)] string? SourceUrl = null,
+    [StringLength(120)] string? CategorySlug = null, [MaxLength(8)] IReadOnlyCollection<string>? ImageUrls = null);

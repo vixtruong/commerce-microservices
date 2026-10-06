@@ -83,6 +83,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="tests/Catalog.Application.Tests/Catalog.Application.Tests.csproj" />
     <Project Path="tests/Payment.Application.Tests/Payment.Application.Tests.csproj" />
     <Project Path="tests/Catalog.Domain.Tests/Catalog.Domain.Tests.csproj" /><Project Path="tests/Inventory.Domain.Tests/Inventory.Domain.Tests.csproj" /><Project Path="tests/Ordering.Domain.Tests/Ordering.Domain.Tests.csproj" /><Project Path="tests/Payment.Domain.Tests/Payment.Domain.Tests.csproj" /><Project Path="tests/Architecture.Tests/Architecture.Tests.csproj" /><Project Path="tests/Commerce.IntegrationTests/Commerce.IntegrationTests.csproj" />
   </Folder>

@@ -57,6 +57,14 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Brand")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("CategorySlug")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasPrecision(0)
                         .HasColumnType("timestamp(0) with time zone");
@@ -65,6 +73,14 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<string>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -76,6 +92,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -86,6 +106,8 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp(0) with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategorySlug");
 
                     b.HasIndex("Sku")
                         .IsUnique();
@@ -159,6 +181,12 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
                 {
+                    b.HasOne("Catalog.Domain.Categories.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategorySlug")
+                        .HasPrincipalKey("Slug")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.OwnsOne("Catalog.Domain.Common.Money", "Price", b1 =>
                         {
                             b1.Property<Guid>("ProductId")

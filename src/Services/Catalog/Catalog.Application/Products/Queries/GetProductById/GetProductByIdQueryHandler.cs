@@ -59,7 +59,8 @@ namespace Catalog.Application.Products.Queries.GetProductById
                 product.Price.Currency,
                 product.Status.ToString(),
                 product.CreatedAtUtc,
-                product.UpdatedAtUtc);
+                product.UpdatedAtUtc, product.Brand, product.ImageUrl, product.SourceUrl, product.CategorySlug,
+                product.ImageUrls.Count > 0 ? product.ImageUrls : product.ImageUrl is null ? [] : [product.ImageUrl]);
 
             await _productCache.SetAsync(response, cancellationToken);
 

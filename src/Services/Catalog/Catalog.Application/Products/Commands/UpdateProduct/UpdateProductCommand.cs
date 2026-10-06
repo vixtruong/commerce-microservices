@@ -1,5 +1,6 @@
 using Catalog.Application.Abstractions;
 using Catalog.Domain.Products;
+using Catalog.Application.Categories;
 using Commerce.BuildingBlocks.Application.Persistence;
 using Commerce.BuildingBlocks.Domain.Results;
 using MediatR;
@@ -12,12 +13,18 @@ namespace Catalog.Application.Products.Commands.UpdateProduct;
 /// <param name="Description">New description.</param>
 /// <param name="PriceAmount">New price amount.</param>
 /// <param name="PriceCurrency">New price currency.</param>
+/// <param name="Brand">Manufacturer; null preserves and empty clears.</param>
+/// <param name="ImageUrl">Catalog image path; null preserves and empty clears.</param>
+/// <param name="SourceUrl">Manufacturer reference; null preserves and empty clears.</param>
+/// <param name="CategorySlug">Group; null preserves and empty clears.</param>
+/// <param name="ImageUrls">Ordered gallery; null preserves and empty clears.</param>
 public sealed record UpdateProductCommand(
     Guid ProductId,
     string Name,
     string? Description,
     decimal PriceAmount,
-    string PriceCurrency) : IRequest<Result>;
+    string PriceCurrency, string? Brand = null, string? ImageUrl = null,
+    string? SourceUrl = null, string? CategorySlug = null, IReadOnlyCollection<string>? ImageUrls = null) : IRequest<Result>;
 
 /// <summary>Activates or deactivates a product explicitly.</summary>
 /// <param name="ProductId">Product identifier.</param>
@@ -30,16 +37,20 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
     private readonly IProductRepository _repository;
     private readonly IProductCache _cache;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICategoryRepository _categories;
 
     /// <summary>Initializes the update handler.</summary>
     /// <param name="repository">Catalog repository.</param>
     /// <param name="cache">Redis cache invalidator.</param>
     /// <param name="unitOfWork">Catalog transaction boundary.</param>
-    public UpdateProductCommandHandler(IProductRepository repository, IProductCache cache, IUnitOfWork unitOfWork)
+    /// <param name="categories">Catalog category repository.</param>
+    public UpdateProductCommandHandler(IProductRepository repository, IProductCache cache, IUnitOfWork unitOfWork,
+        ICategoryRepository categories)
     {
         _repository = repository;
         _cache = cache;
         _unitOfWork = unitOfWork;
+        _categories = categories;
     }
 
     /// <summary>Updates a product and invalidates its cached DTO after commit.</summary>
@@ -56,9 +67,17 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
+        string? categorySlug = request.CategorySlug is null ? product.CategorySlug :
+            string.IsNullOrWhiteSpace(request.CategorySlug) ? null : request.CategorySlug.Trim().ToLowerInvariant();
+        // Disabled groups retain old assignments; new assignments must target an active group.
+        if (categorySlug is not null && categorySlug != product.CategorySlug &&
+            (await _categories.GetBySlugAsync(categorySlug, cancellationToken))?.IsActive != true)
+            return Error.Validation("Catalog.CategoryUnavailable", "Choose an existing active product group.");
         Result result = product.Rename(request.Name, now);
         if (result.IsSuccess) result = product.ChangeDescription(request.Description, now);
         if (result.IsSuccess) result = product.ChangePrice(request.PriceAmount, request.PriceCurrency, now);
+        if (result.IsSuccess) result = product.ChangePresentation(request.Brand ?? product.Brand,
+            request.ImageUrl ?? product.ImageUrl, request.SourceUrl ?? product.SourceUrl, categorySlug, now, request.ImageUrls);
         if (result.IsFailure) return result;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await _cache.RemoveAsync(request.ProductId, cancellationToken);

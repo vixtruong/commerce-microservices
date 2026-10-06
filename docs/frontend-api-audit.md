@@ -38,9 +38,9 @@ Order Shipped currently means ShipmentCreated (Shipping can still be Created), s
 Cancellation reasons include insufficient-stock, inventory-reservation-expired and fake provider failure/timeout.
 Compensation must finish before displaying “stock released”. No timestamps for unpersisted intermediate transitions are fabricated.
 
-No image upload, carrier integration, card collection, refund operation, password change or editable profile exists.
+No carrier integration, card collection, refund operation, password change or editable profile exists. Product images now support authorized multipart uploads and galleries of up to eight photos.
 Notification is an internal durable fake email worker, with no public customer endpoint.
-Categories exist as independent entities but products are not assigned to them.
+Catalog assigns products to a category slug and returns brand/photo/source metadata and ordered `imageUrls`. GET `/api/catalog/categories` returns active groups and published counts; `includeInactive=true` requires `catalog.products.update`. POST requires `catalog.products.create`; PUT `/{slug}` requires `catalog.products.update`. POST `/api/catalog/images` accepts a multipart `file` (JPEG/PNG/WebP, up to 5 MiB), requiring either Catalog create or update permission. Public photos use `/api/catalog/media/{file}` through YARP. `imageUrls` is optional for old clients; null/omitted preserves, [] clears, and the first photo sets backward-compatible `imageUrl`. Cart reads current public product metadata for thumbnails; its stored price/quantity snapshots and gRPC contracts are unchanged. See demo-data-guide.md.
 Dashboard summaries stay inside each database; currencies are grouped instead of summed together.
 
 Postman MCP is not available in this session. An importable collection is maintained under docs/postman;
