@@ -183,6 +183,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - catalog-images:/app/App_Data/product-images
     healthcheck: *api-healthcheck
 
   catalog-api-2:
@@ -205,6 +207,8 @@ services:
     depends_on:
       catalog-api-1:
         condition: service_healthy
+    volumes:
+      - catalog-images:/app/App_Data/product-images
     healthcheck: *api-healthcheck
 
   cart-api:
@@ -367,6 +371,7 @@ networks:
     name: commerce-network
 
 volumes:
+  catalog-images:
   postgres-data:
   redis-data:
   rabbitmq-data:

@@ -17,6 +17,7 @@ ARG ASSEMBLY_NAME
 ENV APP_ASSEMBLY=$ASSEMBLY_NAME \
     ASPNETCORE_URLS=http://+:8080
 COPY --from=publish /app/publish .
+RUN if [ "$ASSEMBLY_NAME" = "Catalog.Api" ]; then mkdir -p /app/App_Data/product-images && chown "$APP_UID:$APP_UID" /app/App_Data/product-images; fi
 USER $APP_UID
 EXPOSE 8080 8081
 ENTRYPOINT ["sh", "-c", "exec dotnet /app/$APP_ASSEMBLY.dll"]

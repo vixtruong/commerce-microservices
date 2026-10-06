@@ -7,6 +7,8 @@ using Commerce.BuildingBlocks.Infrastructure.Observability;
 using Commerce.BuildingBlocks.Infrastructure.Persistence;
 using Commerce.BuildingBlocks.Infrastructure.Security;
 using Catalog.Infrastructure.Persistence;
+using Microsoft.Extensions.FileProviders;
+using Catalog.Infrastructure.Images;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCommerceSerilog();
@@ -28,6 +30,19 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCommerceHttpDefaults();
 app.UseCommerceRequestLogging();
+// Product photos are public Catalog assets served through the existing YARP catalog route.
+string mediaDirectory = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "demo-products");
+string uploadedImages = app.Services.GetRequiredService<ProductImageStorageOptions>().DirectoryPath;
+Directory.CreateDirectory(uploadedImages);
+IFileProvider imageProvider = new PhysicalFileProvider(uploadedImages);
+if (Directory.Exists(mediaDirectory))
+    imageProvider = new CompositeFileProvider(imageProvider, new PhysicalFileProvider(mediaDirectory));
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = imageProvider,
+    RequestPath = "/api/catalog/media",
+    OnPrepareResponse = context => context.Context.Response.Headers["X-Content-Type-Options"] = "nosniff"
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.Use(async (context, next) =>

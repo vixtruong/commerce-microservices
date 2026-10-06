@@ -16,5 +16,6 @@ appsettings.Local.json
 **/test-results
 **/playwright-report
 artifacts
+**/App_Data
 .pnpm-store
 frontend

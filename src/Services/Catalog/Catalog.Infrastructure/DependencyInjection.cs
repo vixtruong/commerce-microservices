@@ -1,6 +1,8 @@
 using Catalog.Application.Abstractions;
 using Catalog.Application.Categories;
 using Catalog.Infrastructure.Caching;
+using Catalog.Application.Images;
+using Catalog.Infrastructure.Images;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Persistence.Repositories;
 using Commerce.BuildingBlocks.Application.Persistence;
@@ -67,6 +69,12 @@ public static class DependencyInjection
         services.AddSingleton<IProductCache, RedisProductCache>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICategoryService, CategoryService>();
+        services.AddSingleton(new ProductImageStorageOptions
+        {
+            DirectoryPath = Path.GetFullPath(configuration["ProductImages:Directory"] ?? "App_Data/product-images")
+        });
+        services.AddSingleton<IProductImageStore, FileProductImageStore>();
+        services.AddScoped<IProductImageService, ProductImageService>();
         services.AddPostgresReadiness<CatalogDbContext>();
         services.AddRedisReadiness();
 
